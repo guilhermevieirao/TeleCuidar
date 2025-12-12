@@ -1,3 +1,5 @@
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { ModalService, ModalConfig } from '@app/core/services/modal.service';
@@ -6,7 +8,8 @@ import { ButtonComponent } from '@app/shared/components/atoms/button/button';
 
 @Component({
   selector: 'app-modal',
-  imports: [IconComponent, ButtonComponent],
+  standalone: true,
+  imports: [CommonModule, IconComponent, ButtonComponent, FormsModule],
   templateUrl: './modal.html',
   styleUrl: './modal.scss'
 })
@@ -16,11 +19,13 @@ export class ModalComponent implements OnInit, OnDestroy {
   isOpen = false;
   config: ModalConfig | null = null;
   private subscription?: Subscription;
+  promptValue = '';
 
   ngOnInit(): void {
     this.subscription = this.modalService.modal$.subscribe((config: ModalConfig) => {
       this.config = config;
       this.isOpen = true;
+      this.promptValue = '';
     });
   }
 
@@ -29,7 +34,7 @@ export class ModalComponent implements OnInit, OnDestroy {
   }
 
   onConfirm(): void {
-    this.modalService.close({ confirmed: true });
+    this.modalService.close({ confirmed: true, promptValue: this.promptValue });
     this.isOpen = false;
   }
 

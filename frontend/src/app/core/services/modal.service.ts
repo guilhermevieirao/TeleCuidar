@@ -3,15 +3,22 @@ import { Subject, Observable } from 'rxjs';
 
 export interface ModalConfig {
   title: string;
-  message: string;
+  message?: string;
+  htmlMessage?: string;
   confirmText?: string;
   cancelText?: string;
-  type?: 'confirm' | 'alert';
+  type?: 'confirm' | 'alert' | 'prompt';
   variant?: 'danger' | 'warning' | 'info' | 'success';
+  prompt?: {
+    label: string;
+    placeholder?: string;
+    required?: boolean;
+  };
 }
 
 export interface ModalResult {
   confirmed: boolean;
+  promptValue?: string;
 }
 
 @Injectable({
@@ -41,6 +48,10 @@ export class ModalService {
 
   alert(config: Omit<ModalConfig, 'type'>): Observable<ModalResult> {
     return this.open({ ...config, type: 'alert' });
+  }
+
+  prompt(config: Omit<ModalConfig, 'type'>): Observable<ModalResult> {
+    return this.open({ ...config, type: 'prompt' });
   }
 
   close(result: ModalResult): void {

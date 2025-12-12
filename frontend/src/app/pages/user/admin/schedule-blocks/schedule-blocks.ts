@@ -37,7 +37,8 @@ export class ScheduleBlocksComponent {
       status: 'aprovada',
       requestDate: '08/12/2025 09:00',
       waitTime: 2,
-      details: 'Solicitação para bloqueio por férias.'
+      details: 'Solicitação para bloqueio por férias.',
+      denialReason: 'Profissional já possui outro bloqueio aprovado para o período.'
     }
   ];
 
@@ -116,7 +117,7 @@ export class ScheduleBlocksComponent {
   openDetails(block: any) {
     this.modal.open({
       title: 'Detalhes do Bloqueio',
-      message:
+      htmlMessage:
         `<div style='line-height:1.7'>`
         + `<strong>Profissional:</strong> ${block.professional.name} (${block.professional.email})<br>`
         + `<strong>Data do Bloqueio:</strong> `
@@ -127,7 +128,8 @@ export class ScheduleBlocksComponent {
         + `<strong>Status:</strong> ${this.getStatusBadge(block.status).label}<br>`
         + `<strong>Data da Solicitação:</strong> ${block.requestDate}<br>`
         + `<strong>Tempo de Espera:</strong> ${block.waitTime} dia(s)<br>`
-        + `<strong>Detalhes:</strong> ${block.details}`
+        + `<strong>Detalhes:</strong> ${block.details}<br>`
+        + (block.denialReason ? `<strong>Justificativa da Negativa:</strong> ${block.denialReason}` : '')
         + `</div>`,
       type: 'alert',
       variant: block.status === 'pendente' ? 'warning' : (block.status === 'aprovada' ? 'success' : (block.status === 'negada' ? 'danger' : undefined)),
@@ -142,7 +144,22 @@ export class ScheduleBlocksComponent {
   }
 
   denyBlock(block: any) {
-    // Aqui você pode chamar o backend futuramente
-    block.status = 'negada';
+    this.modal.prompt({
+      title: 'Negar Bloqueio',
+      message: 'Tem certeza que deseja negar esta solicitação de bloqueio? Por favor, forneça uma justificativa.',
+      variant: 'danger',
+      confirmText: 'Negar Bloqueio',
+      cancelText: 'Cancelar',
+      prompt: {
+        label: 'Justificativa',
+        placeholder: 'Ex: Conflito de agenda, etc.',
+        required: true
+      }
+    }).subscribe(result => {
+      if (result.confirmed && result.promptValue) {
+        block.status = 'negada';
+        block.denialReason = result.promptValue;
+      }
+    });
   }
 }

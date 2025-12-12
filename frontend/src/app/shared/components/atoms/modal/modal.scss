@@ -99,6 +99,33 @@
     margin: 0;
   }
 
+  &__prompt {
+    margin-top: $spacing-md;
+  }
+
+  &__prompt-label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__prompt-textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: $radius-md;
+    font-size: $font-size-base;
+    line-height: $line-height-relaxed;
+    background-color: var(--surface);
+    color: var(--text-primary);
+    @include transition(border-color);
+
+    &:focus {
+      outline: none;
+      border-color: var(--primary-500);
+    }
+  }
+
   &__actions {
     padding: $spacing-lg $spacing-xl $spacing-xl;
     display: flex;

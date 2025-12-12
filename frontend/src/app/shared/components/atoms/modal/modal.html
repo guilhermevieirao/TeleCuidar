@@ -17,7 +17,21 @@
 
       <div class="modal__content">
         <h2 class="modal__title">{{ config.title }}</h2>
-        <p class="modal__message">{{ config.message }}</p>
+        <p class="modal__message" *ngIf="config.message">{{ config.message }}</p>
+        <div class="modal__message" *ngIf="config.htmlMessage" [innerHTML]="config.htmlMessage"></div>
+
+        @if (config.type === 'prompt' && config.prompt) {
+          <div class="modal__prompt">
+            <label class="modal__prompt-label" for="prompt-input">{{ config.prompt.label }}</label>
+            <textarea
+              id="prompt-input"
+              class="modal__prompt-textarea"
+              [(ngModel)]="promptValue"
+              [placeholder]="config.prompt.placeholder || ''"
+              [required]="config.prompt.required || false"
+            ></textarea>
+          </div>
+        }
       </div>
 
       <div class="modal__actions">
