@@ -4,46 +4,48 @@
       <app-logo size="md" />
     </div>
     <nav class="admin-sidebar__nav">
-            <a routerLink="/user/admin/dashboard" routerLinkActive="admin-sidebar__link--active" class="admin-sidebar__link" (click)="closeSidebarOnMobile()">
-              <app-icon name="home" [size]="20" />
-              <span>Dashboard</span>
-            </a>
-      <a routerLink="/user/admin/notifications" routerLinkActive="admin-sidebar__link--active" class="admin-sidebar__link" (click)="closeSidebarOnMobile()">
+      <a [routerLink]="['/' + basePath, 'dashboard']" routerLinkActive="admin-sidebar__link--active" class="admin-sidebar__link" (click)="closeSidebarOnMobile()">
+        <app-icon name="home" [size]="20" />
+        <span>Dashboard</span>
+      </a>
+      <a [routerLink]="['/' + basePath, 'notifications']" routerLinkActive="admin-sidebar__link--active" class="admin-sidebar__link" (click)="closeSidebarOnMobile()">
         <app-icon name="bell" [size]="20" />
         <span>Notificações</span>
         @if (unreadNotifications > 0) {
           <span class="admin-sidebar__badge">{{ unreadNotifications }}</span>
         }
       </a>
-      <a routerLink="/user/admin/users" routerLinkActive="admin-sidebar__link--active" class="admin-sidebar__link" (click)="closeSidebarOnMobile()">
-        <app-icon name="users" [size]="20" />
-        <span>Usuários</span>
-      </a>
-      <a routerLink="/user/admin/invites" routerLinkActive="admin-sidebar__link--active" class="admin-sidebar__link" (click)="closeSidebarOnMobile()">
-        <app-icon name="mail" [size]="20" />
-        <span>Convites</span>
-      </a>
-      <a routerLink="/user/admin/specialties" routerLinkActive="admin-sidebar__link--active" class="admin-sidebar__link" (click)="closeSidebarOnMobile()">
-        <app-icon name="book" [size]="20" />
-        <span>Especialidades</span>
-      </a>
-      <a routerLink="/user/admin/schedules" routerLinkActive="admin-sidebar__link--active" class="admin-sidebar__link" (click)="closeSidebarOnMobile()">
-        <app-icon name="calendar" [size]="20" />
-        <span>Agendas</span>
-      </a>
-      <a routerLink="/user/admin/schedule-blocks" routerLinkActive="admin-sidebar__link--active" class="admin-sidebar__link" (click)="closeSidebarOnMobile()">
-        <app-icon name="clock" [size]="20" />
-        <span>Bloqueios de Agenda</span>
-      </a>
-      <a routerLink="/user/admin/reports" routerLinkActive="admin-sidebar__link--active" class="admin-sidebar__link" (click)="closeSidebarOnMobile()">
-        <app-icon name="bar-chart" [size]="20" />
-        <span>Relatórios</span>
-      </a>
-      <a routerLink="/user/admin/audit-logs" routerLinkActive="admin-sidebar__link--active" class="admin-sidebar__link" (click)="closeSidebarOnMobile()">
-        <app-icon name="activity" [size]="20" />
-        <span>Logs de Auditoria</span>
-      </a>
-      <a routerLink="/user/admin/profile" routerLinkActive="admin-sidebar__link--active" class="admin-sidebar__link" (click)="closeSidebarOnMobile()">
+      @if (user?.role === 'admin') {
+        <a [routerLink]="['/' + basePath, 'users']" routerLinkActive="admin-sidebar__link--active" class="admin-sidebar__link" (click)="closeSidebarOnMobile()">
+          <app-icon name="users" [size]="20" />
+          <span>Usuários</span>
+        </a>
+        <a [routerLink]="['/' + basePath, 'invites']" routerLinkActive="admin-sidebar__link--active" class="admin-sidebar__link" (click)="closeSidebarOnMobile()">
+          <app-icon name="mail" [size]="20" />
+          <span>Convites</span>
+        </a>
+        <a [routerLink]="['/' + basePath, 'specialties']" routerLinkActive="admin-sidebar__link--active" class="admin-sidebar__link" (click)="closeSidebarOnMobile()">
+          <app-icon name="book" [size]="20" />
+          <span>Especialidades</span>
+        </a>
+        <a [routerLink]="['/' + basePath, 'schedules']" routerLinkActive="admin-sidebar__link--active" class="admin-sidebar__link" (click)="closeSidebarOnMobile()">
+          <app-icon name="calendar" [size]="20" />
+          <span>Agendas</span>
+        </a>
+        <a [routerLink]="['/' + basePath, 'schedule-blocks']" routerLinkActive="admin-sidebar__link--active" class="admin-sidebar__link" (click)="closeSidebarOnMobile()">
+          <app-icon name="clock" [size]="20" />
+          <span>Bloqueios de Agenda</span>
+        </a>
+        <a [routerLink]="['/' + basePath, 'reports']" routerLinkActive="admin-sidebar__link--active" class="admin-sidebar__link" (click)="closeSidebarOnMobile()">
+          <app-icon name="bar-chart" [size]="20" />
+          <span>Relatórios</span>
+        </a>
+        <a [routerLink]="['/' + basePath, 'audit-logs']" routerLinkActive="admin-sidebar__link--active" class="admin-sidebar__link" (click)="closeSidebarOnMobile()">
+          <app-icon name="activity" [size]="20" />
+          <span>Logs de Auditoria</span>
+        </a>
+      }
+      <a [routerLink]="['/' + basePath, 'profile']" routerLinkActive="admin-sidebar__link--active" class="admin-sidebar__link" (click)="closeSidebarOnMobile()">
         <app-icon name="user" [size]="20" />
         <span>Meu Perfil</span>
       </a>
@@ -76,17 +78,17 @@
 
       <div class="admin-header__center">
         <a 
-          routerLink="/user/admin/profile"
+          [routerLink]="['/' + basePath, 'profile']"
           class="admin-header__user"
         >
           <app-avatar 
-            [name]="user?.name || 'Admin'" 
+            [name]="user?.name || 'User'" 
             [imageUrl]="user?.avatar"
             size="md"
           />
           <div class="admin-header__user-info">
             <span class="admin-header__user-name">{{ user?.name }}</span>
-            <span class="admin-header__user-role">Administrador</span>
+            <span class="admin-header__user-role">{{ user?.role | titlecase }}</span>
           </div>
         </a>
       </div>
@@ -137,7 +139,7 @@
                 @if (notifications && notifications.length > 0) {
                   @for (notification of notifications.slice(0, 5); track notification.id) {
                     <a 
-                      [routerLink]="notification.link || '/user/admin/notifications'"
+                      [routerLink]="notification.link || ['/' + basePath, 'notifications']"
                       class="admin-header__notification-item"
                       [class.admin-header__notification-item--unread]="!notification.isRead"
                       (click)="toggleNotificationDropdown()"
@@ -162,7 +164,7 @@
 
               @if (notifications && notifications.length > 0) {
                 <a
-                  routerLink="/user/admin/notifications"
+                  [routerLink]="['/' + basePath, 'notifications']"
                   class="admin-header__notifications-footer"
                   (click)="toggleNotificationDropdown()"
                 >

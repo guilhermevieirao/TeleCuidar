@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { IconComponent } from '@app/shared/components/atoms/icon/icon';
 import { AvatarComponent } from '@app/shared/components/atoms/avatar/avatar';
-import { ProfileEditModalComponent } from '@pages/user/admin/profile/profile-edit-modal/profile-edit-modal';
-import { ChangePasswordModalComponent } from '@pages/user/admin/profile/change-password-modal/change-password-modal';
+import { ProfileEditModalComponent } from '@pages/user/shared/profile/profile-edit-modal/profile-edit-modal';
+import { ChangePasswordModalComponent } from '@pages/user/shared/profile/change-password-modal/change-password-modal';
 import { User } from '@app/core/services/users.service';
 import { DatePipe } from '@angular/common';
 import { BadgeComponent } from '@app/shared/components/atoms/badge/badge';

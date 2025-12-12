@@ -1,5 +1,5 @@
 import { Component, OnInit, PLATFORM_ID, Inject } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser, TitleCasePipe } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { LogoComponent } from '@app/shared/components/atoms/logo/logo';
 import { IconComponent } from '@app/shared/components/atoms/icon/icon';
@@ -11,7 +11,7 @@ interface User {
   name: string;
   email: string;
   avatar?: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'professional' | 'patient';
 }
 
 interface Notification {
@@ -24,7 +24,8 @@ interface Notification {
 }
 
 @Component({
-  selector: 'app-admin-layout',
+  selector: 'app-user-layout',
+  standalone: true,
   imports: [
     RouterOutlet,
     RouterLink,
@@ -32,17 +33,19 @@ interface Notification {
     LogoComponent,
     IconComponent,
     AvatarComponent,
-    ThemeToggleComponent
+    ThemeToggleComponent,
+    TitleCasePipe
   ],
-  templateUrl: './admin-layout.html',
-  styleUrl: './admin-layout.scss'
+  templateUrl: './user-layout.html',
+  styleUrl: './user-layout.scss'
 })
-export class AdminLayoutComponent implements OnInit {
+export class UserLayoutComponent implements OnInit {
   isSidebarOpen = false;
   isNotificationDropdownOpen = false;
   unreadNotifications = 0;
   user: User | null = null;
   notifications: Notification[] = [];
+  basePath = '';
 
   constructor(
     private router: Router,
@@ -50,7 +53,7 @@ export class AdminLayoutComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // TODO: Buscar dados do usuário do backend
+    this.basePath = this.getBasePath();
     this.loadUserData();
     this.loadUnreadNotifications();
     this.loadNotifications();
@@ -81,13 +84,22 @@ export class AdminLayoutComponent implements OnInit {
     this.router.navigate(['/auth/login']);
   }
 
+  private getBasePath(): string {
+    const urlSegments = this.router.url.split('/');
+    if (urlSegments.length > 1) {
+      return urlSegments[1];
+    }
+    return 'admin'; // Fallback
+  }
+
   private loadUserData(): void {
     // TODO: Integrar com serviço de autenticação
+    const role = this.basePath as 'admin' | 'professional' | 'patient';
     this.user = {
       id: '1',
-      name: 'Admin User',
-      email: 'admin@telecuidar.com.br',
-      role: 'admin'
+      name: `${role.charAt(0).toUpperCase() + role.slice(1)} User`,
+      email: `${role}@telecuidar.com.br`,
+      role: role
     };
   }
 
@@ -97,13 +109,14 @@ export class AdminLayoutComponent implements OnInit {
   }
 
   private loadNotifications(): void {
+    const basePath = this.getBasePath();
     // TODO: Integrar com serviço de notificações
     this.notifications = [
       {
         id: '1',
         title: 'Nova mensagem',
         message: 'Você recebeu uma nova mensagem do paciente João Silva',
-        link: '/admin/notifications',
+        link: `/${basePath}/notifications`,
         isRead: false,
         createdAt: new Date(Date.now() - 5 * 60000).toISOString()
       },
@@ -111,7 +124,7 @@ export class AdminLayoutComponent implements OnInit {
         id: '2',
         title: 'Consulta confirmada',
         message: 'A consulta de Maria Santos foi confirmada para 15/12/2025',
-        link: '/admin/notifications',
+        link: `/${basePath}/notifications`,
         isRead: false,
         createdAt: new Date(Date.now() - 15 * 60000).toISOString()
       },
@@ -119,7 +132,7 @@ export class AdminLayoutComponent implements OnInit {
         id: '3',
         title: 'Aviso de sistema',
         message: 'Sistema será atualizado em 2 horas',
-        link: '/admin/notifications',
+        link: `/${basePath}/notifications`,
         isRead: true,
         createdAt: new Date(Date.now() - 1 * 3600000).toISOString()
       },
@@ -127,7 +140,7 @@ export class AdminLayoutComponent implements OnInit {
         id: '4',
         title: 'Novo usuário registrado',
         message: 'Um novo profissional se registrou no sistema',
-        link: '/admin/notifications',
+        link: `/${basePath}/notifications`,
         isRead: true,
         createdAt: new Date(Date.now() - 2 * 3600000).toISOString()
       },
@@ -135,7 +148,7 @@ export class AdminLayoutComponent implements OnInit {
         id: '5',
         title: 'Agendamento cancelado',
         message: 'Agendamento do paciente Pedro Santos foi cancelado',
-        link: '/admin/notifications',
+        link: `/${basePath}/notifications`,
         isRead: true,
         createdAt: new Date(Date.now() - 6 * 3600000).toISOString()
       }
