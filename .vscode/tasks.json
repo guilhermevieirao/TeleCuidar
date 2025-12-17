@@ -1,41 +1,78 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"label": "Iniciar Frontend",
-			"type": "shell",
-			"command": "cd frontend; ng serve --host 0.0.0.0 --port 4200",
-			"isBackground": true,
-			"problemMatcher": {
-				"owner": "custom",
-				"pattern": {
-					"regexp": "^$"
-				},
-				"background": {
-					"activeOnStart": true,
-					"beginsPattern": ".*Initial chunk files.*",
-					"endsPattern": ".*Compiled successfully.*|.*Application bundle generation complete.*"
-				}
-			},
-			"presentation": {
-				"echo": true,
-				"reveal": "always",
-				"focus": false,
-				"panel": "shared",
-				"showReuseMessage": true,
-				"clear": false
-			},
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			}
-		},
-		{
-			"label": "Iniciar Proj Alt",
-			"type": "shell",
-			"command": "cd C:\\Users\\GUILHERME\\Documents\\GitHub\\susatende; php artisan serve",
-			"isBackground": true,
-			"group": "build"
-		}
-	]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Iniciar Frontend",
+      "type": "shell",
+      "command": "cd frontend; ng serve --host 0.0.0.0 --port 4200",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "custom",
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*Initial chunk files.*",
+          "endsPattern": ".*Compiled successfully.*|.*Application bundle generation complete.*"
+        }
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated",
+        "showReuseMessage": true,
+        "clear": false,
+        "group": "dev"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      }
+    },
+    {
+      "label": "Iniciar Backend",
+      "type": "shell",
+      "command": "dotnet run --project backend/WebAPI/WebAPI.csproj",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "custom",
+        "pattern": {
+          "regexp": "^\\s*$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^\\s*Building\\.\\.\\.",
+          "endsPattern": "^\\s*Now listening on:.*"
+        }
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated",
+        "showReuseMessage": true,
+        "clear": false,
+        "group": "dev"
+      },
+      "group": "build"
+    },
+    {
+      "label": "Iniciar Tudo",
+      "dependsOn": ["Iniciar Frontend", "Iniciar Backend"],
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Iniciar Proj Alt",
+      "type": "shell",
+      "command": "cd C:\\Users\\GUILHERME\\Documents\\GitHub\\susatende; php artisan serve",
+      "isBackground": true,
+      "group": "build"
+    }
+  ]
 }

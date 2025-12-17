@@ -1,5 +1,5 @@
-import { Component, OnInit, ElementRef, ViewChild, AfterViewInit, effect } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import { Component, OnInit, ElementRef, ViewChild, AfterViewInit, effect, PLATFORM_ID, Inject } from '@angular/core';
+import { CommonModule, DatePipe, isPlatformBrowser } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { AvatarComponent } from '@app/shared/components/atoms/avatar/avatar';
 import { BadgeComponent } from '@app/shared/components/atoms/badge/badge';
@@ -74,7 +74,8 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     private appointmentsService: AppointmentsService,
     private notificationsService: NotificationsService,
     private datePipe: DatePipe,
-    private router: Router
+    private router: Router,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) {
     effect(() => {
       const authUser = this.authService.currentUser();
@@ -215,6 +216,11 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
 
   private loadCharts(): void {
+    // Only load charts in the browser, not during SSR
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
     // Wrap in timeout to ensure DOM is ready if switching views
     setTimeout(() => {
         if (!this.appointmentsChartRef || !this.usersChartRef || !this.monthlyChartRef) return;
