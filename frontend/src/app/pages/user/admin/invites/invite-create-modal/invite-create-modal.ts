@@ -5,6 +5,8 @@ import { IconComponent } from '@app/shared/components/atoms/icon/icon';
 import { ButtonComponent } from '@app/shared/components/atoms/button/button';
 import { UserRole } from '@app/core/services/invites.service';
 
+export type InviteAction = 'send-email' | 'generate-link';
+
 @Component({
   selector: 'app-invite-create-modal',
   standalone: true,
@@ -15,7 +17,7 @@ import { UserRole } from '@app/core/services/invites.service';
 export class InviteCreateModalComponent {
   @Input() isOpen = false;
   @Output() close = new EventEmitter<void>();
-  @Output() create = new EventEmitter<{ email: string; role: UserRole }>();
+  @Output() create = new EventEmitter<{ email: string; role: UserRole; action: InviteAction }>();
 
   inviteData = {
     email: '',
@@ -37,18 +39,29 @@ export class InviteCreateModalComponent {
     this.close.emit();
   }
 
-  onCreate(): void {
-    if (this.isFormValid()) {
-      this.create.emit({ ...this.inviteData });
+  onSendEmail(): void {
+    if (this.isFormValidForEmail()) {
+      this.create.emit({ ...this.inviteData, action: 'send-email' });
       this.resetModal();
     }
   }
 
-  isFormValid(): boolean {
+  onGenerateLink(): void {
+    if (this.isFormValidForLink()) {
+      this.create.emit({ ...this.inviteData, action: 'generate-link' });
+      this.resetModal();
+    }
+  }
+
+  isFormValidForEmail(): boolean {
     return !!(
       this.inviteData.email?.trim() &&
       this.isValidEmail(this.inviteData.email)
     );
+  }
+
+  isFormValidForLink(): boolean {
+    return !!this.inviteData.role;
   }
 
   private isValidEmail(email: string): boolean {

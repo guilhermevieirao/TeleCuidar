@@ -81,8 +81,6 @@ export class AuthService {
 
   // Logout
   logout(): void {
-    this.http.post(AUTH_ENDPOINTS.LOGOUT, {}).subscribe();
-    
     this.clearStorage();
     this.authState.next({
       user: null,

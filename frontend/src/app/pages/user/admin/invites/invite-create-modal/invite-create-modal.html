@@ -19,7 +19,10 @@
       <div class="modal__body">
         <form class="invite-form">
           <div class="invite-form__field">
-            <label for="invite-email" class="invite-form__label">E-mail</label>
+            <label for="invite-email" class="invite-form__label">
+              E-mail
+              <span class="invite-form__label-hint">(opcional para gerar link)</span>
+            </label>
             <input
               id="invite-email"
               type="email"
@@ -53,12 +56,21 @@
         </app-button>
 
         <app-button
-          [variant]="'primary'"
-          (click)="onCreate()"
-          [disabled]="!isFormValid()"
+          [variant]="'secondary'"
+          (click)="onGenerateLink()"
+          [disabled]="!isFormValidForLink()"
         >
-          <app-icon name="check" [size]="18" />
-          Enviar Convite
+          <app-icon name="plus" [size]="18" />
+          Gerar Link
+        </app-button>
+
+        <app-button
+          [variant]="'primary'"
+          (click)="onSendEmail()"
+          [disabled]="!isFormValidForEmail()"
+        >
+          <app-icon name="mail" [size]="18" />
+          Enviar Email
         </app-button>
       </div>
     </div>

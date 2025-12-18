@@ -1,4 +1,4 @@
-import { Component, afterNextRender, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, afterNextRender, inject, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { IconComponent } from '@app/shared/components/atoms/icon/icon';
@@ -30,10 +30,11 @@ import { InviteCreateModalComponent } from './invite-create-modal/invite-create-
   templateUrl: './invites.html',
   styleUrl: './invites.scss'
 })
-export class InvitesComponent {
+export class InvitesComponent implements OnDestroy {
   invites: Invite[] = [];
   isLoading = false;
   isCreateModalOpen = false;
+  private pollingInterval?: ReturnType<typeof setInterval>;
 
   // Filtros
   searchTerm = '';
@@ -72,7 +73,16 @@ export class InvitesComponent {
   constructor() {
     afterNextRender(() => {
       this.loadInvites();
+      this.pollingInterval = setInterval(() => {
+        this.loadInvites();
+      }, 5000);
     });
+  }
+
+  ngOnDestroy(): void {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+    }
   }
 
   loadInvites(): void {
@@ -192,17 +202,13 @@ export class InvitesComponent {
   }
 
   getInviteByToken(invite: Invite): void {
-    this.invitesService.getInviteByToken(invite.token).subscribe({
-      next: (inviteDetails) => {
-        const link = `${window.location.origin}/registrar?token=${invite.token}`;
-        navigator.clipboard.writeText(link).then(() => {
-          this.modalService.alert({
-            title: 'Link Copiado',
-            message: 'O link do convite foi copiado para a área de transferência!',
-            variant: 'success'
-          });
-        });
-      }
+    const link = `${window.location.origin}/registrar?token=${invite.token}`;
+    navigator.clipboard.writeText(link).then(() => {
+      this.modalService.alert({
+        title: 'Link Copiado',
+        message: 'O link do convite foi copiado para a área de transferência!',
+        variant: 'success'
+      });
     });
   }
 
@@ -276,6 +282,42 @@ export class InvitesComponent {
     });
   }
 
+  deleteInvite(invite: Invite): void {
+    this.modalService.confirm({
+      title: 'Excluir Convite',
+      message: `Tem certeza que deseja excluir o convite para ${invite.email || 'este usuário'}? Esta ação não pode ser desfeita.`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'danger'
+    }).subscribe((result) => {
+      if (result.confirmed) {
+        this.invitesService.deleteInvite(invite.id).subscribe({
+          next: () => {
+            this.loadInvites();
+            setTimeout(() => {
+              this.cdr.markForCheck();
+              this.modalService.alert({
+                title: 'Sucesso',
+                message: 'Convite excluído com sucesso!',
+                variant: 'success'
+              });
+            }, 300);
+          },
+          error: () => {
+            setTimeout(() => {
+              this.cdr.markForCheck();
+              this.modalService.alert({
+                title: 'Erro',
+                message: 'Erro ao excluir convite. Tente novamente.',
+                variant: 'danger'
+              });
+            }, 300);
+          }
+        });
+      }
+    });
+  }
+
   openCreateModal(): void {
     this.isCreateModalOpen = true;
   }
@@ -284,7 +326,57 @@ export class InvitesComponent {
     this.isCreateModalOpen = false;
   }
 
-  handleCreateInvite(data: { email: string; role: UserRole }): void {
+  handleCreateInvite(data: { email: string; role: UserRole; action: 'send-email' | 'generate-link' }): void {
+    if (data.action === 'generate-link') {
+      this.handleGenerateLink(data);
+    } else {
+      this.handleSendEmail(data);
+    }
+  }
+
+  private handleGenerateLink(data: { email: string; role: UserRole }): void {
+    this.isLoading = true;
+    const inviteData = {
+      email: data.email || '',
+      role: data.role,
+      specialtyId: undefined
+    };
+
+    this.invitesService.createInvite({ email: inviteData.email, role: inviteData.role }).subscribe({
+      next: (newInvite) => {
+        this.isLoading = false;
+        this.closeCreateModal();
+        
+        const link = `${window.location.origin}/registrar?token=${newInvite.token}`;
+        
+        navigator.clipboard.writeText(link).then(() => {
+          setTimeout(() => {
+            this.cdr.markForCheck();
+            this.modalService.alert({
+              title: 'Link Gerado',
+              message: `Link de cadastro copiado para a área de transferência:\n\n${link}\n\nO link expira em 7 dias.`,
+              confirmText: 'OK',
+              variant: 'success'
+            });
+          }, 300);
+        });
+      },
+      error: () => {
+        this.isLoading = false;
+        this.closeCreateModal();
+        setTimeout(() => {
+          this.cdr.markForCheck();
+          this.modalService.alert({
+            title: 'Erro',
+            message: 'Erro ao gerar link de convite.',
+            variant: 'danger'
+          });
+        }, 300);
+      }
+    });
+  }
+
+  private handleSendEmail(data: { email: string; role: UserRole }): void {
     this.isLoading = true;
     this.invitesService.createInvite({ email: data.email, role: data.role }).subscribe({
       next: (newInvite) => {
@@ -294,7 +386,7 @@ export class InvitesComponent {
           this.cdr.markForCheck();
           this.modalService.alert({
             title: 'Sucesso',
-            message: 'Convite criado com sucesso!',
+            message: `Convite enviado para ${data.email}!`,
             variant: 'success'
           });
         }, 300);
@@ -305,7 +397,7 @@ export class InvitesComponent {
           this.cdr.markForCheck();
           this.modalService.alert({
             title: 'Erro',
-            message: 'Erro ao criar convite. Tente novamente.',
+            message: 'Erro ao enviar convite. Tente novamente.',
             variant: 'danger'
           });
         }, 300);

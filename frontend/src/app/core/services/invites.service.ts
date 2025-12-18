@@ -100,6 +100,10 @@ export class InvitesService {
   }
 
   cancelInvite(id: string): Observable<void> {
+    return this.http.patch<void>(`${this.apiUrl}/${id}/cancel`, {});
+  }
+
+  deleteInvite(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 

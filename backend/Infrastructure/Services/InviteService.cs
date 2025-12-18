@@ -283,6 +283,17 @@ public class InviteService : IInviteService
         };
     }
 
+    public async Task<bool> CancelInviteAsync(Guid id)
+    {
+        var invite = await _context.Invites.FindAsync(id);
+        if (invite == null) return false;
+
+        // Apenas mudar o status para Cancelled
+        invite.Status = InviteStatus.Cancelled;
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<bool> DeleteInviteAsync(Guid id)
     {
         var invite = await _context.Invites.FindAsync(id);

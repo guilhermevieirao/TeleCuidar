@@ -79,15 +79,30 @@
   &__footer {
     display: flex;
     justify-content: flex-end;
+    align-items: stretch;
     gap: $spacing-md;
     padding: $spacing-xl;
     border-top: 1px solid var(--border);
+
+    app-button {
+      flex: 1 1 0;
+      max-width: 150px;
+      
+      ::ng-deep button {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: $spacing-xs;
+      }
+    }
 
     @include mobile {
       flex-direction: column-reverse;
       
       app-button {
         width: 100%;
+        max-width: none;
       }
     }
   }
@@ -124,6 +139,13 @@
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
     color: var(--text-primary);
+    
+    &-hint {
+      font-size: $font-size-xs;
+      color: var(--text-secondary);
+      font-weight: $font-weight-regular;
+      margin-left: $spacing-xs;
+    }
   }
 
   &__input {

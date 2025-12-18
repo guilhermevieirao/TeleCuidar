@@ -46,6 +46,7 @@ export class UsersComponent implements OnInit, OnDestroy {
   
   users: User[] = [];
   loading = false;
+  private pollingInterval: any;
   
   // Modal de edição
   isEditModalOpen = false;
@@ -84,29 +85,21 @@ export class UsersComponent implements OnInit, OnDestroy {
 
   private searchTimeout?: number;
   private cdr = inject(ChangeDetectorRef);
-  private pollingInterval?: number;
 
   constructor() {
     afterNextRender(() => {
       this.loadUsers();
-      this.startPolling();
     });
   }
 
-  ngOnInit(): void {}
-
-  ngOnDestroy(): void {
-    this.stopPolling();
-  }
-
-  private startPolling(): void {
-    // Atualizar a cada 5 segundos
-    this.pollingInterval = window.setInterval(() => {
+  ngOnInit(): void {
+    // Polling a cada 5 segundos para detectar novos usuários
+    this.pollingInterval = setInterval(() => {
       this.loadUsers();
     }, 5000);
   }
 
-  private stopPolling(): void {
+  ngOnDestroy(): void {
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval);
     }
