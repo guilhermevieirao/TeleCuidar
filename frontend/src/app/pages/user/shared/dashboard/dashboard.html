@@ -23,13 +23,23 @@
             <h2 class="profile-card__name">{{ user?.name }} {{ user?.lastName }}</h2>
             <p class="profile-card__email">{{ user?.email }}</p>
           </div>
+          <div class="profile-card__meta">
+            <div class="profile-card__meta-item">
+              <app-icon name="calendar" [size]="16" />
+              <span>Membro desde {{ user?.memberSince }}</span>
+            </div>
+            <div class="profile-card__meta-item">
+              <app-icon name="clock" [size]="16" />
+              <span>Último login: {{ user?.lastLogin }}</span>
+            </div>
+          </div>
           <app-badge [variant]="getRoleBadgeVariant()" [label]="getRoleLabel()" size="sm" />
         </div>
       </div>
       <div class="profile-card__actions">
-        <button class="profile-card__button" (click)="openProfileEdit()">
-          <app-icon name="edit" [size]="18" />
-          <span>Editar Perfil</span>
+        <button class="profile-card__button" (click)="goToProfile()">
+          <app-icon name="user" [size]="18" />
+          <span>Ver Perfil</span>
         </button>
       </div>
     </div>

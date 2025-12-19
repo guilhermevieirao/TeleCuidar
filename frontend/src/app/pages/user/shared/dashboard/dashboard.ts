@@ -22,7 +22,7 @@ interface DashboardUser {
   avatar?: string;
   role: string;
   memberSince: string;
-  lastAccess: string;
+  lastLogin: string;
 }
 
 interface ScheduleBlock {
@@ -99,35 +99,17 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    // We'll handle chart loading in the updateUser method or here if user is already loaded
-    if (this.isAdmin()) {
-      this.loadCharts();
+    if (isPlatformBrowser(this.platformId)) {
+      this.initializeCharts();
     }
   }
 
-  private determineViewMode(authUser: AuthUser): void {
-    // Priority 1: Check if user role explicitly tells us they're admin
-    if (authUser.role === 'ADMIN') {
-      this.viewMode = 'ADMIN';
-      return;
-    }
-    
-    // Priority 2: Check URL for role-specific paths
-    const url = this.router.url;
-    if (url.includes('/professional')) {
-      this.viewMode = 'PROFESSIONAL';
-      return;
-    }
-    
-    // Priority 3: Use user role from token
-    if (authUser.role === 'PROFESSIONAL') {
-      this.viewMode = 'PROFESSIONAL';
-    } else {
-      this.viewMode = 'PATIENT';
-    }
+  private determineViewMode(user: AuthUser): void {
+    this.viewMode = user.role;
+    this.loadDataForView();
   }
 
-  private updateUser(authUser: AuthUser) {
+  private updateUser(authUser: AuthUser): void {
     this.user = {
       id: authUser.id,
       name: authUser.name,
@@ -135,24 +117,21 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       email: authUser.email,
       avatar: authUser.avatar,
       role: authUser.role,
-      memberSince: this.formatDate(authUser.createdAt),
-      lastAccess: 'Hoje às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      memberSince: this.datePipe.transform(authUser.createdAt, 'MM/yyyy') || '',
+      lastLogin: this.datePipe.transform(authUser.updatedAt, 'dd/MM/yyyy HH:mm') || '' // Assuming last login is tracked in updatedAt
     };
+  }
 
-    // Load data based on VIEW MODE, not just user role
-    if (this.isAdmin()) {
+  private loadDataForView(): void {
+    if (this.viewMode === 'ADMIN') {
       this.loadStats();
-      // If view is already initialized, we might need to load charts
-      if (this.appointmentsChartRef) {
-        this.loadCharts();
-      }
-    } else if (this.isProfessional()) {
-      this.loadScheduleBlocks();
-      this.loadNotifications();
-      this.loadNextAppointments();
+      this.initializeCharts();
     } else {
-      this.loadNotifications();
       this.loadNextAppointments();
+      this.loadNotifications();
+      if (this.viewMode === 'PROFESSIONAL') {
+        this.loadScheduleBlocks();
+      }
     }
   }
 
@@ -197,10 +176,6 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       'PATIENT': 'patient'
     };
     return pathMap[this.viewMode as keyof typeof pathMap];
-  }
-
-  private formatDate(date: Date | string): string {
-    return this.datePipe.transform(date, 'MMMM yyyy') || '';
   }
 
   private loadNextAppointments(): void {
@@ -272,7 +247,9 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     });
   }
 
-  private loadCharts(): void {
+  private initializeCharts(): void {
+    if (this.viewMode !== 'ADMIN') return;
+
     // Only load charts in the browser, not during SSR
     if (!isPlatformBrowser(this.platformId)) {
       return;
@@ -341,5 +318,9 @@ export class DashboardComponent implements OnInit, AfterViewInit {
           }
         });
     }, 0);
+  }
+
+  goToProfile(): void {
+    this.router.navigate(['/perfil']);
   }
 }
