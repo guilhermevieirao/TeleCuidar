@@ -157,11 +157,11 @@
               <div class="appointment-item appointment-item--with-actions">
                 <div class="appointment-item__main">
                   <div class="appointment-item__date">
-                    <span class="day">{{ appt.scheduledDate | date:'dd' }}</span>
-                    <span class="month">{{ appt.scheduledDate | date:'MMM' }}</span>
+                    <span class="day">{{ appt.date | date:'dd' }}</span>
+                    <span class="month">{{ appt.date | date:'MMM':'':'pt-BR' }}</span>
                   </div>
-                  <div class="appointment-item__info">
-                    <span class="time">{{ appt.scheduledDate | date:'HH:mm' }}</span>
+                  <div class="appointment-card__time">
+                    <span class="time">{{ appt.time }}</span>
                     <h4 class="name">{{ appt.patientName }}</h4>
                     <span class="specialty">{{ appt.specialtyName }}</span>
                   </div>
@@ -227,7 +227,7 @@
                 </div>
                 <app-badge 
                   [variant]="block.status === 'aprovada' ? 'success' : (block.status === 'pendente' ? 'warning' : 'error')" 
-                  [label]="block.status | titlecase" 
+                  [label]="getStatusLabel(block.status)" 
                   size="sm" 
                 />
               </div>
@@ -279,14 +279,14 @@
           <app-button 
             variant="primary" 
             [fullWidth]="true"
-            [routerLink]="['/professional/appointments']">
+            [routerLink]="['/professional/consultas']">
             Minhas Consultas
           </app-button>
           
           <app-button 
             variant="outline" 
             [fullWidth]="true"
-            [routerLink]="['/professional/schedule-blocks']">
+            [routerLink]="['/professional/bloqueios-agenda']">
             Minhas solicitações de bloqueio
           </app-button>
         </div>
@@ -306,11 +306,11 @@
             @for (appt of nextAppointments; track appt.id) {
               <div class="appointment-item">
                 <div class="appointment-item__date">
-                  <span class="day">{{ appt.scheduledDate | date:'dd' }}</span>
-                  <span class="month">{{ appt.scheduledDate | date:'MMM' }}</span>
+                  <span class="day">{{ appt.date | date:'dd' }}</span>
+                  <span class="month">{{ appt.date | date:'MMM':'':'pt-BR' }}</span>
                 </div>
-                <div class="appointment-item__info">
-                  <span class="time">{{ appt.scheduledDate | date:'HH:mm' }}</span>
+                <div class="appointment-card__time">
+                  <span class="time">{{ appt.time }}</span>
                   <h4 class="name">
                     {{ isPatient() ? appt.professionalName : appt.patientName }}
                   </h4>
@@ -366,7 +366,7 @@
           <app-button 
             variant="primary" 
             [fullWidth]="true"
-            [routerLink]="['/', getuserrolePath(), 'appointments']">
+            [routerLink]="['/consultas']">
             Minhas Consultas
           </app-button>
           
@@ -374,18 +374,15 @@
             <app-button 
               variant="outline" 
               [fullWidth]="true"
-              [routerLink]="['/patient/scheduling']">
+              [routerLink]="['/agendar']">
               Agendar Nova Consulta
             </app-button>
           } @else if (isProfessional()) {
-             <!-- Fallback or specific action for professional if needed -->
-             <!-- User requested "Schedule New" shortcut for professional too, but route is unclear.
-                  Assuming they might want to see their schedule blocks or just same button pointing to appointments -->
-             <app-button 
+            <app-button 
               variant="outline" 
               [fullWidth]="true"
-              [routerLink]="['/professional/appointments']">
-              Minha Agenda
+              [routerLink]="['/bloqueios-agenda']">
+              Meus Bloqueios de Agenda
             </app-button>
           }
         </div>

@@ -56,7 +56,9 @@ export interface Appointment {
   professionalName?: string;
   specialtyId: string;
   specialtyName?: string;
-  scheduledDate: string;
+  date: string;
+  time: string;
+  endTime?: string;
   type?: AppointmentType;
   status: AppointmentStatus;
   observation?: string;
@@ -68,18 +70,19 @@ export interface Appointment {
 
 export interface CreateAppointmentDto {
   patientId: string;
-  scheduleId: string;
-  type?: AppointmentType;
-  observation?: string;
-  preConsultation?: PreConsultationForm;
-}
-
-export interface UpdateAppointmentDto {
-  scheduledDate?: string;
-  status?: AppointmentStatus;
+  professionalId: string;
+  specialtyId: string;
+  date: string;
+  time: string;
+  endTime?: string;
   type?: AppointmentType;
   observation?: string;
   meetLink?: string;
+}
+
+export interface UpdateAppointmentDto {
+  status?: AppointmentStatus;
+  observation?: string;
   preConsultation?: PreConsultationForm;
 }
 

@@ -17,11 +17,11 @@
       </div>
       <div class="info-item">
         <label>Data</label>
-        <span>{{ appointment.scheduledDate | date:'dd/MM/yyyy' }}</span>
+        <span>{{ appointment.date | date:'dd/MM/yyyy':'':'pt-BR' }}</span>
       </div>
       <div class="info-item">
         <label>Horário</label>
-        <span>{{ appointment.scheduledDate | date:'HH:mm' }}</span>
+        <span>{{ appointment.time }}</span>
       </div>
       <div class="info-item">
         <label>Tipo</label>

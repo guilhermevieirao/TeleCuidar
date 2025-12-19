@@ -9,9 +9,8 @@ import { User } from '@core/services/users.service';
 interface AppointmentDetails {
   id?: string;
   specialty: Specialty;
-  date: Date;
+  date: string;
   time: string;
-  scheduledDate: string; // ISO date string
   professional: User;
   observation?: string;
 }

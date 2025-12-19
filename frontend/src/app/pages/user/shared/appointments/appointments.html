@@ -63,8 +63,8 @@
     <div class="appointment-card" *ngFor="let appointment of appointments">
       <div class="card-header">
         <div class="date-badge">
-          <span class="day">{{ appointment.scheduledDate | date:'dd' }}</span>
-          <span class="month">{{ appointment.scheduledDate | date:'MMM' }}</span>
+          <span class="day">{{ appointment.date | date:'dd' }}</span>
+          <span class="month">{{ appointment.date | date:'MMM':'':'pt-BR' }}</span>
         </div>
         <div class="status-badge" [ngClass]="appointment.status">
           {{ appointment.status === 'Scheduled' ? 'Agendada' : 
@@ -77,8 +77,7 @@
       <div class="card-content">
         <div class="professional-info">
           <div class="avatar-placeholder">
-             <img *ngIf="appointment.patientName" [src]="appointment.patientName" alt="Avatar">
-             <app-icon *ngIf="!appointment.patientName" name="user" [size]="24"></app-icon>
+             <app-icon name="user" [size]="24"></app-icon>
           </div>
           <div class="info-text">
             <h3>{{ userrole === 'PATIENT' ? appointment.professionalName : appointment.patientName }}</h3>
@@ -89,7 +88,7 @@
         <div class="meta-info">
             <div class="meta-item">
                 <app-icon name="clock" [size]="16"></app-icon>
-                <span>{{ (appointment.scheduledDate | date:'HH:mm') }} - {{ appointment.scheduledDate || '...' }}</span>
+                <span>{{ appointment.time }}{{ appointment.endTime ? ' - ' + appointment.endTime : '' }}</span>
             </div>
             <div class="meta-item" *ngIf="appointment.type">
                 <app-badge 

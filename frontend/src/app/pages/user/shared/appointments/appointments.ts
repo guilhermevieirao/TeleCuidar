@@ -109,11 +109,11 @@ export class AppointmentsComponent implements OnInit {
     this.counts.all = this.allAppointments.length;
     
     this.counts.upcoming = this.allAppointments.filter(a => 
-        new Date(a.scheduledDate) >= now && a.status !== 'Cancelled' && a.status !== 'Completed'
+        new Date(a.date) >= now && a.status !== 'Cancelled' && a.status !== 'Completed'
     ).length;
 
     this.counts.past = this.allAppointments.filter(a => 
-        new Date(a.scheduledDate) < now || a.status === 'Completed'
+        new Date(a.date) < now || a.status === 'Completed'
     ).length;
 
     this.counts.Cancelled = this.allAppointments.filter(a => 
@@ -127,9 +127,9 @@ export class AppointmentsComponent implements OnInit {
 
     // Filter by Tab
     if (this.activeTab === 'upcoming') {
-        filtered = filtered.filter(a => new Date(a.scheduledDate) >= now && a.status !== 'Cancelled' && a.status !== 'Completed');
+        filtered = filtered.filter(a => new Date(a.date) >= now && a.status !== 'Cancelled' && a.status !== 'Completed');
     } else if (this.activeTab === 'past') {
-        filtered = filtered.filter(a => new Date(a.scheduledDate) < now || a.status === 'Completed');
+        filtered = filtered.filter(a => new Date(a.date) < now || a.status === 'Completed');
     } else if (this.activeTab === 'cancelled') {
         filtered = filtered.filter(a => a.status === 'Cancelled');
     }
@@ -165,8 +165,8 @@ export class AppointmentsComponent implements OnInit {
 
   sortAppointments() {
     this.appointments.sort((a, b) => {
-      const dateA = new Date(a.scheduledDate).getTime();
-      const dateB = new Date(b.scheduledDate).getTime();
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
       return this.sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
     });
   }

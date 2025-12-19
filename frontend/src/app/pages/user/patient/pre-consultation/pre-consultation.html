@@ -22,7 +22,7 @@
       </div>
       <div class="summary-item">
         <span class="label">Data:</span>
-        <span class="value">{{ appointment.scheduledDate | date:'dd/MM/yyyy' }} às {{ (appointment.scheduledDate | date:'HH:mm') }}</span>
+        <span class="value">{{ appointment.date | date:'dd/MM/yyyy':'':'pt-BR' }} às {{ (appointment.time) }}</span>
       </div>
     </div>
   }

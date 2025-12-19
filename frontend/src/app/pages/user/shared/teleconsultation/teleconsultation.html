@@ -24,8 +24,8 @@
           <h2>Carregando...</h2>
         </div>
         <div class="meta-info" *ngIf="appointment">
-          <span><app-icon name="calendar" [size]="14" /> {{ appointment.scheduledDate | date:'dd/MM/yyyy' }}</span>
-          <span><app-icon name="clock" [size]="14" /> {{ appointment.scheduledDate | date:'HH:mm' }}</span>
+          <span><app-icon name="calendar" [size]="14" /> {{ appointment.date | date:'dd/MM/yyyy':'':'pt-BR' }}</span>
+          <span><app-icon name="clock" [size]="14" /> {{ appointment.time }}</span>
         </div>
       </div>
 

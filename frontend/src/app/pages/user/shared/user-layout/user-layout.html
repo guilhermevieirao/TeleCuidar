@@ -110,7 +110,7 @@
           />
           <div class="admin-header__user-info">
             <span class="admin-header__user-name">{{ user?.name }}</span>
-            <span class="admin-header__user-role">{{ user?.role | titlecase }}</span>
+            <span class="admin-header__user-role">{{ getRoleLabel(user?.role) }}</span>
           </div>
         </a>
       </div>

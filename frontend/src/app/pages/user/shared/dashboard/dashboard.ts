@@ -10,6 +10,7 @@ import { StatsService, PlatformStats } from '@app/core/services/stats.service';
 import { AuthService } from '@app/core/services/auth.service';
 import { AppointmentsService, Appointment } from '@app/core/services/appointments.service';
 import { NotificationsService, Notification } from '@app/core/services/notifications.service';
+import { ScheduleBlocksService } from '@app/core/services/schedule-blocks.service';
 import { User as AuthUser } from '@app/core/models/auth.model';
 import Chart from 'chart.js/auto';
 
@@ -24,7 +25,7 @@ interface DashboardUser {
 }
 
 interface ScheduleBlock {
-  id: number;
+  id: string;
   type: 'single' | 'range';
   date?: string;
   startDate?: string;
@@ -73,6 +74,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     private authService: AuthService,
     private appointmentsService: AppointmentsService,
     private notificationsService: NotificationsService,
+    private scheduleBlocksService: ScheduleBlocksService,
     private datePipe: DatePipe,
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object
@@ -80,17 +82,17 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     effect(() => {
       const authUser = this.authService.currentUser();
       if (authUser) {
+        this.determineViewMode(authUser);
         this.updateUser(authUser);
       }
     });
   }
 
   ngOnInit(): void {
-    this.determineViewMode();
-
     // Initial load attempt (in case signal is already set)
     const authUser = this.authService.currentUser();
     if (authUser) {
+      this.determineViewMode(authUser);
       this.updateUser(authUser);
     }
   }
@@ -102,11 +104,22 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     }
   }
 
-  private determineViewMode(): void {
-    const url = this.router.url;
-    if (url.includes('/admin')) {
+  private determineViewMode(authUser: AuthUser): void {
+    // Priority 1: Check if user role explicitly tells us they're admin
+    if (authUser.role === 'ADMIN') {
       this.viewMode = 'ADMIN';
-    } else if (url.includes('/professional')) {
+      return;
+    }
+    
+    // Priority 2: Check URL for role-specific paths
+    const url = this.router.url;
+    if (url.includes('/professional')) {
+      this.viewMode = 'PROFESSIONAL';
+      return;
+    }
+    
+    // Priority 3: Use user role from token
+    if (authUser.role === 'PROFESSIONAL') {
       this.viewMode = 'PROFESSIONAL';
     } else {
       this.viewMode = 'PATIENT';
@@ -154,7 +167,12 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
 
   getuserrolePath(): string {
-    return this.viewMode;
+    const pathMap = {
+      'ADMIN': 'admin',
+      'PROFESSIONAL': 'professional',
+      'PATIENT': 'patient'
+    };
+    return pathMap[this.viewMode as keyof typeof pathMap];
   }
 
   private formatDate(date: Date | string): string {
@@ -182,26 +200,41 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
 
   private loadScheduleBlocks(): void {
-    // Mock data for professional schedule blocks
-    this.scheduleBlocks = [
-      {
-        id: 1,
-        type: 'single',
-        date: new Date(new Date().setDate(new Date().getDate() + 5)).toISOString(),
-        reason: 'Consulta Médica',
-        status: 'pendente',
-        createdAt: new Date().toISOString()
+    this.scheduleBlocksService.getScheduleBlocks(undefined, undefined, 1, 5).subscribe({
+      next: (response) => {
+        this.scheduleBlocks = response.data.map(block => ({
+          id: block.id,
+          type: block.type.toLowerCase() as 'single' | 'range',
+          date: block.date,
+          startDate: block.startDate,
+          endDate: block.endDate,
+          reason: block.reason,
+          status: this.mapStatusToPortuguese(block.status),
+          createdAt: block.createdAt
+        }));
       },
-      {
-        id: 2,
-        type: 'range',
-        startDate: new Date(new Date().setDate(new Date().getDate() + 10)).toISOString(),
-        endDate: new Date(new Date().setDate(new Date().getDate() + 12)).toISOString(),
-        reason: 'Congresso',
-        status: 'aprovada',
-        createdAt: new Date(new Date().setDate(new Date().getDate() - 2)).toISOString()
-      }
-    ];
+      error: (err) => console.error('Erro ao carregar bloqueios de agenda', err)
+    });
+  }
+
+  private mapStatusToPortuguese(status: string): 'pendente' | 'aprovada' | 'negada' | 'vencido' {
+    const statusMap: { [key: string]: 'pendente' | 'aprovada' | 'negada' | 'vencido' } = {
+      'Pending': 'pendente',
+      'Approved': 'aprovada',
+      'Rejected': 'negada',
+      'Expired': 'vencido'
+    };
+    return statusMap[status] || 'pendente';
+  }
+
+  getStatusLabel(status: string): string {
+    const labels: { [key: string]: string } = {
+      'pendente': 'Pendente',
+      'aprovada': 'Aprovada',
+      'negada': 'Negada',
+      'vencido': 'Vencido'
+    };
+    return labels[status] || status;
   }
 
   private loadStats(): void {

@@ -18,11 +18,11 @@
       </div>
       <div class="detail-item">
         <span class="label">Data</span>
-        <span class="value">{{ appointment.scheduledDate | date:'fullDate' }}</span>
+        <span class="value">{{ appointment.date | date:'fullDate':'':'pt-BR' }}</span>
       </div>
       <div class="detail-item">
         <span class="label">Horário</span>
-        <span class="value">{{ (appointment.scheduledDate | date:'HH:mm') }}</span>
+        <span class="value">{{ (appointment.time) }}</span>
       </div>
       <div class="detail-item full-width" *ngIf="appointment.observation">
         <span class="label">Observações</span>

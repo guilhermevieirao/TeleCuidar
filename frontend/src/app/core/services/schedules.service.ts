@@ -84,9 +84,14 @@ export interface PaginatedResponse<T> {
 
 export interface AvailableSlot {
   date: string;
-  startTime: string;
-  endTime: string;
-  available: boolean;
+  time: string;
+  isAvailable: boolean;
+}
+
+export interface ProfessionalAvailability {
+  professionalId: string;
+  professionalName: string;
+  slots: AvailableSlot[];
 }
 
 @Injectable({
@@ -127,17 +132,17 @@ export class SchedulesService {
     return this.http.get<Schedule[]>(`${this.apiUrl}/professional/${professionalId}`);
   }
 
-  getAvailableSlots(
+  getAvailability(
     professionalId: string,
-    startDate: string,
-    endDate: string
-  ): Observable<AvailableSlot[]> {
+    startDate: Date,
+    endDate: Date
+  ): Observable<ProfessionalAvailability> {
     const params = new HttpParams()
-      .set('startDate', startDate)
-      .set('endDate', endDate);
+      .set('startDate', startDate.toISOString())
+      .set('endDate', endDate.toISOString());
 
-    return this.http.get<AvailableSlot[]>(
-      `${this.apiUrl}/professional/${professionalId}/available-slots`,
+    return this.http.get<ProfessionalAvailability>(
+      `${this.apiUrl}/professional/${professionalId}/availability`,
       { params }
     );
   }

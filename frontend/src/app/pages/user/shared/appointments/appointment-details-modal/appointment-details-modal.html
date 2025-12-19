@@ -42,11 +42,11 @@
         <div class="info-row">
             <div class="info-group">
                 <label>Data</label>
-                <p>{{ appointment.scheduledDate | date:'fullDate' }}</p>
+                <p>{{ appointment.date | date:'fullDate':'':'pt-BR' }}</p>
             </div>
             <div class="info-group">
                 <label>Horário</label>
-                <p>{{ (appointment.scheduledDate | date:'HH:mm') }}</p>
+                <p>{{ (appointment.time) }}</p>
             </div>
         </div>
 

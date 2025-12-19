@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, PLATFORM_ID, Inject, HostListener, ChangeDetectorRef } from '@angular/core';
-import { isPlatformBrowser, TitleCasePipe, DOCUMENT } from '@angular/common';
+import { isPlatformBrowser, DOCUMENT } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { LogoComponent } from '@app/shared/components/atoms/logo/logo';
 import { IconComponent } from '@app/shared/components/atoms/icon/icon';
@@ -19,8 +19,7 @@ import { User } from '@core/models/auth.model';
     LogoComponent,
     IconComponent,
     AvatarComponent,
-    ThemeToggleComponent,
-    TitleCasePipe
+    ThemeToggleComponent
   ],
   templateUrl: './user-layout.html',
   styleUrl: './user-layout.scss'
@@ -207,5 +206,15 @@ export class UserLayoutComponent implements OnInit, OnDestroy {
     if (this.notificationPollingInterval) {
       clearInterval(this.notificationPollingInterval);
     }
+  }
+
+  getRoleLabel(role: string | undefined): string {
+    if (!role) return '';
+    const roleMap: { [key: string]: string } = {
+      'PATIENT': 'Paciente',
+      'PROFESSIONAL': 'Profissional',
+      'ADMIN': 'Administrador'
+    };
+    return roleMap[role] || role;
   }
 }

@@ -69,14 +69,14 @@
         <app-button variant="ghost" size="sm" (click)="changeMonth(-1)">
           <app-icon name="arrow-left" [size]="16"></app-icon>
         </app-button>
-        <h3>{{ currentMonth | date:'MMMM yyyy' }}</h3>
+        <h3>{{ currentMonth | date:'MMMM yyyy':'':'pt-BR' }}</h3>
         <app-button variant="ghost" size="sm" (click)="changeMonth(1)">
           <app-icon name="arrow-right" [size]="16"></app-icon>
         </app-button>
       </div>
 
       <div class="calendar-grid">
-        <div class="weekday" *ngFor="let day of ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']">{{ day }}</div>
+        <div class="weekday" *ngFor="let day of weekDays">{{ day }}</div>
         
         <div class="day" 
              *ngFor="let day of calendarDays"
@@ -97,7 +97,7 @@
   <div class="step-content" *ngIf="currentStep === 'time'">
     <div class="step-header">
       <h2>Horários Disponíveis</h2>
-      <p>{{ selectedDate | date:'fullDate' }}</p>
+      <p>{{ selectedDate | date:'fullDate':'':'pt-BR' }}</p>
     </div>
 
     <div class="slots-list">
@@ -115,7 +115,7 @@
   <div class="step-content" *ngIf="currentStep === 'professional-selection'">
     <div class="step-header">
       <h2>Escolha o Profissional</h2>
-      <p>{{ selectedDate | date:'shortDate' }} às {{ selectedSlot?.time }}</p>
+      <p>{{ selectedDate | date:'shortDate':'':'pt-BR' }} às {{ selectedSlot?.time }}</p>
     </div>
 
     <div class="professionals-list">
@@ -153,7 +153,7 @@
       </div>
       <div class="info-row">
         <label>Data</label>
-        <p>{{ selectedDate | date:'fullDate' }}</p>
+        <p>{{ selectedDate | date:'fullDate':'':'pt-BR' }}</p>
       </div>
       <div class="info-row">
         <label>Horário</label>
