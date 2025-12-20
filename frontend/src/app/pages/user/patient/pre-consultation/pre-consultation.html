@@ -189,11 +189,35 @@
                 <img [src]="att.previewUrl" [alt]="att.title">
               </div>
               <div class="attachment-info">
-                <span class="attachment-title">{{ att.title }}</span>
-                <button type="button" class="remove-btn" (click)="removeAttachment($index)">
-                  <app-icon name="trash" [size]="16" />
-                  Remover
-                </button>
+                @if (editingAttachmentIndex === $index) {
+                  <input 
+                    type="text" 
+                    [(ngModel)]="att.title" 
+                    [ngModelOptions]="{standalone: true}"
+                    class="form-input edit-title-input" 
+                    (keyup.enter)="saveAttachmentEdit($index)"
+                    (keyup.escape)="cancelAttachmentEdit()">
+                  <div class="edit-actions">
+                    <button type="button" class="save-btn" (click)="saveAttachmentEdit($index)">
+                      <app-icon name="check" [size]="14" />
+                    </button>
+                    <button type="button" class="cancel-btn" (click)="cancelAttachmentEdit()">
+                      <app-icon name="close" [size]="14" />
+                    </button>
+                  </div>
+                } @else {
+                  <span class="attachment-title">{{ att.title }}</span>
+                  <div class="attachment-actions">
+                    <button type="button" class="edit-btn" (click)="editAttachment($index)">
+                      <app-icon name="edit" [size]="16" />
+                      Editar
+                    </button>
+                    <button type="button" class="remove-btn" (click)="removeAttachment($index)">
+                      <app-icon name="trash" [size]="16" />
+                      Remover
+                    </button>
+                  </div>
+                }
               </div>
             </div>
           }
@@ -203,37 +227,77 @@
       <!-- Add Attachment UI -->
       @if (isAddingAttachment) {
         <div class="add-attachment-container">
-          <div class="form-group">
-            <label for="attachmentTitle">Título do Anexo</label>
-            <input id="attachmentTitle" type="text" [(ngModel)]="newAttachmentTitle" [ngModelOptions]="{standalone: true}" class="form-input" placeholder="Ex: Exame de Sangue">
-          </div>
-
-          @if (selectedFilePreview) {
-            <div class="upload-area" (click)="fileInput.click()">
-              <input #fileInput type="file" (change)="onFileSelected($event)" accept="image/*" hidden>
-              <div class="preview-selected">
-                <img [src]="selectedFilePreview" alt="Preview">
-                <p>{{ selectedFile?.name }}</p>
-                <p style="font-size: 12px; color: var(--primary);">Clique para alterar</p>
-              </div>
+          <!-- Multiple files list -->
+          @if (pendingFiles.length > 0) {
+            <div class="pending-files-list">
+              @for (pending of pendingFiles; track $index) {
+                <div class="pending-file-item">
+                  <div class="pending-file-preview" [class.loading]="pending.loading">
+                    @if (pending.loading) {
+                      <div class="loading-spinner"></div>
+                    } @else {
+                      <img [src]="pending.previewUrl" [alt]="pending.title">
+                    }
+                  </div>
+                  <div class="pending-file-info">
+                    <input 
+                      type="text" 
+                      [(ngModel)]="pending.title" 
+                      [ngModelOptions]="{standalone: true}"
+                      class="form-input pending-title-input" 
+                      placeholder="Título do anexo">
+                    <span class="file-name">{{ pending.file.name }}</span>
+                  </div>
+                  <button type="button" class="remove-pending-btn" (click)="removePendingFile($index)">
+                    <app-icon name="close" [size]="18" />
+                  </button>
+                </div>
+              }
+            </div>
+            
+            <div class="add-more-files">
+              <button type="button" class="add-more-btn" (click)="fileInput.click()">
+                <app-icon name="plus" [size]="16" />
+                Adicionar mais arquivos
+              </button>
+              <input #fileInput type="file" (change)="onFileSelected($event)" accept="image/*,application/pdf,.doc,.docx" hidden multiple>
             </div>
           } @else {
-              <div class="upload-area" 
-                   (drop)="onFileDropped($event)" 
-                   (dragover)="onDragOver($event)"
-                   (click)="fileInput.click()">
-                <input #fileInput type="file" (change)="onFileSelected($event)" accept="image/*" hidden>
-                <app-icon name="upload-cloud" [size]="48" />
-                <div>
-                  <p><strong>Clique para fazer upload</strong> ou arraste e solte</p>
-                  <p class="text-sm text-secondary">SVG, PNG, JPG or GIF (max. 800x400px)</p>
+            <!-- Original single file flow (fallback) -->
+            <div class="form-group">
+              <label for="attachmentTitle">Título do Anexo</label>
+              <input id="attachmentTitle" type="text" [(ngModel)]="newAttachmentTitle" [ngModelOptions]="{standalone: true}" class="form-input" placeholder="Ex: Exame de Sangue">
+            </div>
+
+            @if (selectedFilePreview) {
+              <div class="upload-area" (click)="fileInput.click()">
+                <input #fileInput type="file" (change)="onFileSelected($event)" accept="image/*,application/pdf,.doc,.docx" hidden multiple>
+                <div class="preview-selected">
+                  <img [src]="selectedFilePreview" alt="Preview">
+                  <p>{{ selectedFile?.name }}</p>
+                  <p style="font-size: 12px; color: var(--primary);">Clique para alterar</p>
                 </div>
               </div>
+            } @else {
+                <div class="upload-area" 
+                     (drop)="onFileDropped($event)" 
+                     (dragover)="onDragOver($event)"
+                     (click)="fileInput.click()">
+                  <input #fileInput type="file" (change)="onFileSelected($event)" accept="image/*,application/pdf,.doc,.docx" hidden multiple>
+                  <app-icon name="upload-cloud" [size]="48" />
+                  <div>
+                    <p><strong>Clique para fazer upload</strong> ou arraste e solte</p>
+                    <p class="text-sm text-secondary">Imagens, PDF, DOC (múltiplos arquivos)</p>
+                  </div>
+                </div>
+            }
           }
 
           <div class="attachment-actions">
             <app-button variant="outline" size="sm" type="button" (click)="cancelAddingAttachment()">Cancelar</app-button>
-            <app-button variant="primary" size="sm" type="button" (click)="saveAttachment()" [disabled]="!newAttachmentTitle || !selectedFile">Adicionar</app-button>
+            <app-button variant="primary" size="sm" type="button" (click)="saveAttachment()" [disabled]="pendingFiles.length === 0 && (!newAttachmentTitle || !selectedFile)">
+              {{ pendingFiles.length > 1 ? 'Adicionar ' + pendingFiles.length + ' arquivos' : 'Adicionar' }}
+            </app-button>
           </div>
         </div>
       } @else {

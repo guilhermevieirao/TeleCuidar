@@ -45,6 +45,12 @@ export class PreConsultationComponent implements OnInit, OnDestroy {
   newAttachmentTitle = '';
   selectedFile: File | null = null;
   selectedFilePreview: string | null = null;
+  
+  // Multiple files pending (for batch add)
+  pendingFiles: { file: File; title: string; previewUrl: string; loading?: boolean }[] = [];
+  
+  // Editing existing attachment
+  editingAttachmentIndex: number | null = null;
 
   // Mobile Upload
   isQrCodeModalOpen = false;
@@ -173,13 +179,68 @@ export class PreConsultationComponent implements OnInit, OnDestroy {
     this.newAttachmentTitle = '';
     this.selectedFile = null;
     this.selectedFilePreview = null;
+    this.pendingFiles = [];
   }
 
   onFileSelected(event: any) {
-    const file = event.target.files[0];
-    if (file) {
-      this.handleFile(file);
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      // Add files immediately with loading state
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const pendingIndex = this.pendingFiles.length;
+        
+        // Add immediately with loading placeholder
+        this.pendingFiles.push({
+          file,
+          title: file.name.replace(/\.[^/.]+$/, ''),
+          previewUrl: '',
+          loading: true
+        });
+        
+        // Load preview in background
+        this.createPreviewUrl(file).then(previewUrl => {
+          if (this.pendingFiles[pendingIndex]) {
+            this.pendingFiles[pendingIndex].previewUrl = previewUrl;
+            this.pendingFiles[pendingIndex].loading = false;
+          }
+        });
+      }
+      this.isAddingAttachment = true;
     }
+    event.target.value = '';
+  }
+
+  private createPreviewUrl(file: File): Promise<string> {
+    return new Promise((resolve) => {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e: any) => resolve(e.target.result);
+        reader.readAsDataURL(file);
+      } else {
+        resolve('assets/icons/file-placeholder.svg');
+      }
+    });
+  }
+
+  removePendingFile(index: number) {
+    this.pendingFiles.splice(index, 1);
+    if (this.pendingFiles.length === 0) {
+      this.isAddingAttachment = false;
+    }
+  }
+
+  // Edit existing attachment
+  editAttachment(index: number) {
+    this.editingAttachmentIndex = index;
+  }
+
+  saveAttachmentEdit(index: number) {
+    this.editingAttachmentIndex = null;
+  }
+
+  cancelAttachmentEdit() {
+    this.editingAttachmentIndex = null;
   }
 
   onFileDropped(event: DragEvent) {
@@ -237,6 +298,7 @@ export class PreConsultationComponent implements OnInit, OnDestroy {
   }
 
   saveAttachment() {
+    // Save from old single-file flow
     if (this.newAttachmentTitle && this.selectedFile) {
       this.attachments.push({
         title: this.newAttachmentTitle,
@@ -244,8 +306,21 @@ export class PreConsultationComponent implements OnInit, OnDestroy {
         previewUrl: this.selectedFilePreview || '',
         type: this.selectedFile.type.startsWith('image/') ? 'image' : 'document'
       });
-      this.cancelAddingAttachment();
     }
+    
+    // Save all pending files (new multi-file flow)
+    for (const pending of this.pendingFiles) {
+      if (pending.title) {
+        this.attachments.push({
+          title: pending.title,
+          file: pending.file,
+          previewUrl: pending.previewUrl,
+          type: pending.file.type.startsWith('image/') ? 'image' : 'document'
+        });
+      }
+    }
+    
+    this.cancelAddingAttachment();
   }
 
   // Mobile Upload Methods

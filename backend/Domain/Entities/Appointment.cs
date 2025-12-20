@@ -16,6 +16,8 @@ public class Appointment : BaseEntity
     public string? Observation { get; set; }
     public string? MeetLink { get; set; }
     public string? PreConsultationJson { get; set; } // Store PreConsultationForm as JSON
+    public string? BiometricsJson { get; set; } // Store BiometricsData as JSON
+    public string? AttachmentsChatJson { get; set; } // Store AttachmentMessage[] as JSON
     
     // Navigation Properties
     public User Patient { get; set; } = null!;

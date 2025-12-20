@@ -201,6 +201,59 @@
       text-overflow: ellipsis;
     }
 
+    .edit-title-input {
+      padding: $spacing-xs $spacing-sm;
+      font-size: $font-size-sm;
+      width: 100%;
+    }
+
+    .edit-actions {
+      display: flex;
+      gap: $spacing-xs;
+
+      .save-btn, .cancel-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: $spacing-xs;
+        border-radius: $radius-sm;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .save-btn {
+        color: var(--success);
+        &:hover { background: var(--success-50); }
+      }
+
+      .cancel-btn {
+        color: var(--text-secondary);
+        &:hover { background: var(--neutral-100); }
+      }
+    }
+
+    .attachment-actions {
+      display: flex;
+      gap: $spacing-sm;
+    }
+
+    .edit-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-size: $font-size-xs;
+      cursor: pointer;
+      padding: 0;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
     .remove-btn {
       display: flex;
       align-items: center;
@@ -300,6 +353,11 @@
   }
 }
 
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .add-attachment-container {
   border: 1px solid var(--border);
   border-radius: $radius-lg;
@@ -308,6 +366,116 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-md;
+
+  .pending-files-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    max-height: 300px;
+    overflow-y: auto;
+
+    .pending-file-item {
+      display: flex;
+      align-items: center;
+      gap: $spacing-md;
+      padding: $spacing-sm;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: $radius-md;
+
+      .pending-file-preview {
+        width: 60px;
+        height: 60px;
+        border-radius: $radius-sm;
+        overflow: hidden;
+        flex-shrink: 0;
+        background: var(--neutral-100);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &.loading {
+          background: var(--neutral-200);
+        }
+
+        .loading-spinner {
+          width: 24px;
+          height: 24px;
+          border: 3px solid var(--neutral-300);
+          border-top-color: var(--primary);
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+      }
+
+      .pending-file-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+
+        .pending-title-input {
+          padding: $spacing-xs $spacing-sm;
+          font-size: $font-size-sm;
+        }
+
+        .file-name {
+          font-size: $font-size-xs;
+          color: var(--text-tertiary);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+      }
+
+      .remove-pending-btn {
+        background: none;
+        border: none;
+        color: var(--text-tertiary);
+        cursor: pointer;
+        padding: $spacing-xs;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &:hover {
+          color: var(--red-500);
+        }
+      }
+    }
+  }
+
+  .add-more-files {
+    display: flex;
+    justify-content: center;
+
+    .add-more-btn {
+      display: flex;
+      align-items: center;
+      gap: $spacing-xs;
+      padding: $spacing-sm $spacing-md;
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: $radius-md;
+      color: var(--text-secondary);
+      font-size: $font-size-sm;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+        background: var(--primary-50);
+      }
+    }
+  }
 
   .upload-area {
     border: 2px dashed var(--border);

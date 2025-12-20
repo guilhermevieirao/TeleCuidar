@@ -148,7 +148,14 @@ export class MobileUploadComponent implements OnInit {
             fileSize: item.file.size,
             fileUrl: base64
           };
-          this.chatService.addMessage(this.appointmentId, newMessage);
+          
+          // Aguardar resposta antes de enviar próximo
+          await new Promise<void>((resolve, reject) => {
+            this.chatService.addMessage(this.appointmentId!, newMessage).subscribe({
+              next: () => resolve(),
+              error: (err) => reject(new Error(err.error?.message || 'Erro ao enviar anexo.'))
+            });
+          });
         } else if (this.token) {
           const payload: TemporaryUploadDto = {
             title: item.title || item.file.name,

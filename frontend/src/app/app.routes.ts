@@ -12,6 +12,7 @@ import { DashboardComponent } from '@pages/user/shared/dashboard/dashboard';
 import { NotificationsComponent } from '@pages/user/shared/notifications/notifications';
 import { ProfileComponent } from '@pages/user/shared/profile/profile';
 import { AppointmentsComponent } from '@pages/user/shared/appointments/appointments';
+import { AppointmentDetailsModalComponent } from '@pages/user/shared/appointments/appointment-details-modal/appointment-details-modal';
 import { ScheduleBlocksComponent } from '@pages/user/shared/schedule-blocks/schedule-blocks';
 import { MyScheduleComponent } from '@pages/user/professional/my-schedule/my-schedule';
 

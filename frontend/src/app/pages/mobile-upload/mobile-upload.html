@@ -101,15 +101,16 @@
       type="file" 
       #galleryInput
       accept="image/*,video/*"
+      multiple
       (change)="onFileSelected($event)" 
-      hidden 
-      multiple>
+      hidden>
 
     <input 
       type="file" 
-      #fileInput 
+      #fileInput
+      accept="*/*" 
+      multiple
       (change)="onFileSelected($event)" 
-      hidden 
-      multiple>
+      hidden>
   </main>
 </div>
