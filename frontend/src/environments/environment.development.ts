@@ -1,5 +1,8 @@
+// ========================================
 // Este arquivo é gerado automaticamente pelo script generate-env.js
 // NÃO EDITE MANUALMENTE - Edite o arquivo .env na raiz do projeto
+// ========================================
+// Ambiente: Desenvolvimento Local (ng serve)
 
 // Determina dinamicamente a URL da API baseado no host atual
 const getApiUrl = () => {
@@ -13,9 +16,29 @@ const getApiUrl = () => {
   return 'http://localhost:5239/api';
 };
 
+// Determina dinamicamente o domínio do Jitsi Self-Hosted
+const getJitsiDomain = () => {
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    // Em desenvolvimento local, Jitsi roda em localhost:8443
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return 'localhost:8443';
+    }
+    // Se acessando via IP da rede, usar mesmo IP para Jitsi
+    return `${host}:8443`;
+  }
+  return 'localhost:8443';
+};
+
 export const environment = {
   production: false,
   apiUrl: getApiUrl(),
-  jitsiDomain: 'meet.jit.si',
-  jitsiEnabled: false,
+  
+  // Configurações do Jitsi Meet Self-Hosted
+  jitsi: {
+    domain: getJitsiDomain(),
+    enabled: true,
+    requiresAuth: true,
+    appId: 'telecuidar'
+  }
 };

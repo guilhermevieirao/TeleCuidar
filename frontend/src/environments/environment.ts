@@ -1,8 +1,8 @@
 // ========================================
-// Ambiente de DESENVOLVIMENTO LOCAL
+// Este arquivo é gerado automaticamente pelo script generate-env.js
+// NÃO EDITE MANUALMENTE - Edite o arquivo .env na raiz do projeto
 // ========================================
-// Usado quando: ng serve (tasks do VS Code)
-// Jitsi: docker-compose.jitsi.yml rodando separado
+// Ambiente: Desenvolvimento Local (ng serve)
 
 // Determina dinamicamente a URL da API baseado no host atual
 const getApiUrl = () => {
@@ -36,13 +36,9 @@ export const environment = {
   
   // Configurações do Jitsi Meet Self-Hosted
   jitsi: {
-    // Domínio do servidor Jitsi (self-hosted local)
     domain: getJitsiDomain(),
-    // Se o Jitsi está habilitado
     enabled: true,
-    // Self-hosted sempre requer autenticação JWT
     requiresAuth: true,
-    // App ID para JWT (deve corresponder ao configurado no Prosody)
     appId: 'telecuidar'
   }
 };

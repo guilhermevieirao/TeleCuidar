@@ -1,0 +1,2 @@
+# Este arquivo mantém o diretório no repositório git
+# Os certificados reais (cert.crt e cert.key) são gerados pelo deploy

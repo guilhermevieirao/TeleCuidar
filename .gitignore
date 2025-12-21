@@ -87,6 +87,12 @@ desktop.ini
 *.key
 *.pem
 *.crt
+jitsi-config/keys/cert.*
+docker/ssl/*.crt
+docker/ssl/*.key
+docker/ssl/*.pem
+!docker/ssl/README.md
+!jitsi-config/keys/README.md
 
 # Backup files
 *.bak

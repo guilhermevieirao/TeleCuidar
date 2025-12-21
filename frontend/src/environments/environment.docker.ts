@@ -1,8 +1,8 @@
 // ========================================
-// Ambiente de DESENVOLVIMENTO COM DOCKER
+// Este arquivo é gerado automaticamente pelo script generate-env.js
+// NÃO EDITE MANUALMENTE - Edite o arquivo .env na raiz do projeto
 // ========================================
-// Usado quando: docker-compose.dev.yml
-// Jitsi: Integrado no mesmo docker-compose
+// Ambiente: Docker Development (docker-compose.dev.yml)
 
 // Determina dinamicamente a URL da API baseado no host atual
 const getApiUrl = () => {
@@ -31,13 +31,9 @@ export const environment = {
   
   // Configurações do Jitsi Meet Self-Hosted
   jitsi: {
-    // Domínio do servidor Jitsi (self-hosted Docker)
     domain: getJitsiDomain(),
-    // Se o Jitsi está habilitado
     enabled: true,
-    // Self-hosted sempre requer autenticação JWT
     requiresAuth: true,
-    // App ID para JWT (deve corresponder ao configurado no Prosody)
     appId: 'telecuidar'
   }
 };

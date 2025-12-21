@@ -1,8 +1,8 @@
 // ========================================
-// Ambiente de PRODUÇÃO
+// Este arquivo é gerado automaticamente pelo script generate-env.js
+// NÃO EDITE MANUALMENTE - Edite o arquivo .env na raiz do projeto
 // ========================================
-// Usado quando: Docker na VPS
-// Jitsi: Integrado no docker-compose.yml
+// Ambiente: Produção (docker-compose.yml)
 
 // Determina dinamicamente a URL da API baseado no host atual
 const getApiUrl = () => {
@@ -19,9 +19,8 @@ const getApiUrl = () => {
 const getJitsiDomain = () => {
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
-    // Em produção, Jitsi está em subdomínio meet.* ou na porta 8443
-    // Configurar no .env: JITSI_DOMAIN=meet.seudominio.com.br
-    // Ou usar a mesma porta: host:8443
+    // Em produção, Jitsi está em subdomínio meet.*
+    // O backend retorna a configuração correta via /api/jitsi/config
     return `meet.${host}`;
   }
   return 'meet.telecuidar.com.br';
@@ -33,13 +32,9 @@ export const environment = {
   
   // Configurações do Jitsi Meet Self-Hosted
   jitsi: {
-    // Domínio do servidor Jitsi (self-hosted)
-    // Será sobrescrito pelo backend via API /api/jitsi/config
     domain: getJitsiDomain(),
     enabled: true,
-    // Self-hosted sempre requer autenticação JWT
     requiresAuth: true,
-    // App ID para JWT (deve corresponder ao configurado no Prosody)
     appId: 'telecuidar'
   }
 };

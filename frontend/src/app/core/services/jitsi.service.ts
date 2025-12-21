@@ -355,6 +355,19 @@ export class JitsiService {
         lang: 'ptBR'
       });
 
+      // Configurar permissões do iframe para câmera e microfone
+      // A JitsiMeetExternalAPI cria um iframe, mas não define o atributo 'allow'
+      // que é necessário para a Permissions Policy do navegador
+      const container = document.getElementById(containerId);
+      if (container) {
+        const iframe = container.querySelector('iframe');
+        if (iframe) {
+          iframe.setAttribute('allow', 
+            'camera; microphone; display-capture; autoplay; clipboard-write; speaker-selection; fullscreen'
+          );
+        }
+      }
+
       // Event listeners
       this.setupEventListeners(options);
 

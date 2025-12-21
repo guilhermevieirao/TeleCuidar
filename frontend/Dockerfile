@@ -7,6 +7,11 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 
+# Argumentos de build que podem ser passados via --build-arg
+ARG JITSI_ENABLED=true
+ARG JITSI_APP_ID=telecuidar
+ARG JITSI_REQUIRES_AUTH=true
+
 # Copiar arquivos de dependências primeiro para cache
 COPY package*.json ./
 
@@ -21,8 +26,9 @@ COPY . .
 RUN mkdir -p /telecuidar && \
     echo "NODE_ENV=production" > /telecuidar/.env && \
     echo "API_URL=/api" >> /telecuidar/.env && \
-    echo "JITSI_ENABLED=true" >> /telecuidar/.env && \
-    echo "JITSI_DOMAIN=meet.jit.si" >> /telecuidar/.env
+    echo "JITSI_ENABLED=${JITSI_ENABLED}" >> /telecuidar/.env && \
+    echo "JITSI_APP_ID=${JITSI_APP_ID}" >> /telecuidar/.env && \
+    echo "JITSI_REQUIRES_AUTH=${JITSI_REQUIRES_AUTH}" >> /telecuidar/.env
 
 # Mover app para subpasta para manter estrutura relativa
 WORKDIR /telecuidar/frontend
