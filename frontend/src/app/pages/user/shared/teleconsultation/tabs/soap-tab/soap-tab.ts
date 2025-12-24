@@ -1,10 +1,10 @@
-import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, OnChanges, SimpleChanges, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@shared/components/atoms/button/button';
 import { AppointmentsService, Appointment } from '@core/services/appointments.service';
 import { TeleconsultationRealTimeService, DataUpdatedEvent } from '@core/services/teleconsultation-realtime.service';
-import { Subject, takeUntil, debounceTime, filter } from 'rxjs';
+import { Subject, takeUntil, debounceTime } from 'rxjs';
 
 @Component({
   selector: 'app-soap-tab',
@@ -13,7 +13,7 @@ import { Subject, takeUntil, debounceTime, filter } from 'rxjs';
   templateUrl: './soap-tab.html',
   styleUrls: ['./soap-tab.scss']
 })
-export class SoapTabComponent implements OnInit, OnDestroy {
+export class SoapTabComponent implements OnInit, OnDestroy, OnChanges {
   @Input() appointmentId: string | null = null;
   @Input() appointment: Appointment | null = null;
   @Input() userrole: 'PATIENT' | 'PROFESSIONAL' | 'ADMIN' = 'PATIENT';
@@ -23,6 +23,8 @@ export class SoapTabComponent implements OnInit, OnDestroy {
   isSaving = false;
   lastSaved: Date | null = null;
   private destroy$ = new Subject<void>();
+  private dataLoaded = false;
+  private isReceivingUpdate = false; // Flag para evitar loop de atualizações
 
   constructor(
     private fb: FormBuilder,
@@ -39,9 +41,6 @@ export class SoapTabComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    // Carregar dados existentes do SOAP
-    this.loadSoapData();
-    
     // Setup real-time subscriptions
     this.setupRealTimeSubscriptions();
     
@@ -50,18 +49,48 @@ export class SoapTabComponent implements OnInit, OnDestroy {
       return;
     }
     
+    // Carregar dados existentes do SOAP se já tiver appointment
+    if (this.appointment && !this.dataLoaded) {
+      this.loadSoapData();
+    }
+    
     // Auto-save on value changes (debounced) - apenas para profissionais
     if (this.userrole === 'PROFESSIONAL') {
+      // Enviar preview em tempo real (debounce curto)
       this.soapForm.valueChanges
         .pipe(
           takeUntil(this.destroy$),
-          debounceTime(2000)
+          debounceTime(300) // 300ms para preview em tempo real
         )
         .subscribe(() => {
-          if (this.soapForm.dirty) {
+          if (!this.isReceivingUpdate && this.appointmentId) {
+            // Notificar outros participantes sobre a mudança (preview)
+            this.teleconsultationRealTime.notifyDataUpdated(
+              this.appointmentId,
+              'soap',
+              this.soapForm.value
+            );
+          }
+        });
+      
+      // Salvar no banco com debounce maior
+      this.soapForm.valueChanges
+        .pipe(
+          takeUntil(this.destroy$),
+          debounceTime(2000) // 2s para salvar no banco
+        )
+        .subscribe(() => {
+          if (this.soapForm.dirty && !this.isReceivingUpdate) {
             this.saveSoap();
           }
         });
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    // Quando appointment mudar e ainda não carregamos os dados, carregar
+    if (changes['appointment'] && changes['appointment'].currentValue && !this.dataLoaded) {
+      this.loadSoapData();
     }
   }
 
@@ -76,10 +105,18 @@ export class SoapTabComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((event: DataUpdatedEvent) => {
         if (event.data) {
+          // Marcar que estamos recebendo uma atualização para evitar loop
+          this.isReceivingUpdate = true;
+          
           // Update form with received data
           this.soapForm.patchValue(event.data, { emitEvent: false });
           this.soapForm.markAsPristine();
           this.cdr.detectChanges();
+          
+          // Liberar flag após um pequeno delay
+          setTimeout(() => {
+            this.isReceivingUpdate = false;
+          }, 100);
         }
       });
   }
@@ -90,9 +127,13 @@ export class SoapTabComponent implements OnInit, OnDestroy {
         const soapData = JSON.parse(this.appointment.soapJson);
         this.soapForm.patchValue(soapData);
         this.soapForm.markAsPristine();
+        this.dataLoaded = true;
       } catch (error) {
         console.error('Erro ao carregar dados do SOAP:', error);
       }
+    } else if (this.appointment) {
+      // Appointment existe mas não tem dados de SOAP ainda
+      this.dataLoaded = true;
     }
   }
 
@@ -111,13 +152,6 @@ export class SoapTabComponent implements OnInit, OnDestroy {
           this.lastSaved = new Date();
           this.soapForm.markAsPristine();
           this.cdr.detectChanges();
-          
-          // Notify other participant via SignalR
-          this.teleconsultationRealTime.notifyDataUpdated(
-            this.appointmentId!,
-            'soap',
-            this.soapForm.value
-          );
         },
         error: (error) => {
           console.error('Erro ao salvar SOAP:', error);

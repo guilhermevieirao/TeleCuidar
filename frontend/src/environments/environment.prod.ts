@@ -19,7 +19,7 @@ const getApiUrl = () => {
 const getJitsiDomain = () => {
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
-    // Em produção, Jitsi está em subdomínio meet.*
+    // Em produção, Jitsi está em subdomínio meet.* 
     // O backend retorna a configuração correta via /api/jitsi/config
     return `meet.${host}`;
   }

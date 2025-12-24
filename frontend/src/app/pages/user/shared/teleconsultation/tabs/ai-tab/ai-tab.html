@@ -45,7 +45,7 @@
       <div class="section-content">
         <div class="result-area" [class.has-content]="summary">
           @if (summary) {
-            <div class="markdown-content">{{ summary }}</div>
+            <markdown class="markdown-content" [data]="summary"></markdown>
           } @else {
             <div class="empty-state">
               <app-icon name="file" [size]="40" />
@@ -100,7 +100,7 @@
 
         <div class="result-area" [class.has-content]="diagnosticHypothesis">
           @if (diagnosticHypothesis) {
-            <div class="markdown-content">{{ diagnosticHypothesis }}</div>
+            <markdown class="markdown-content" [data]="diagnosticHypothesis"></markdown>
           } @else {
             <div class="empty-state">
               <app-icon name="stethoscope" [size]="40" />

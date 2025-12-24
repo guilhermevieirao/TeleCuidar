@@ -1,11 +1,12 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { IconComponent } from '@shared/components/atoms/icon/icon';
 import { ButtonComponent } from '@shared/components/atoms/button/button';
 import { BadgeComponent } from '@shared/components/atoms/badge/badge';
 import { AppointmentsService, Appointment, AppointmentType } from '@core/services/appointments.service';
 import { AuthService } from '@core/services/auth.service';
+import { TeleconsultationRealTimeService, DataUpdatedEvent } from '@core/services/teleconsultation-realtime.service';
 import { BiometricsTabComponent } from '@pages/user/shared/teleconsultation/tabs/biometrics-tab/biometrics-tab';
 import { AttachmentsChatTabComponent } from '@pages/user/shared/teleconsultation/tabs/attachments-chat-tab/attachments-chat-tab';
 import { SoapTabComponent } from '@pages/user/shared/teleconsultation/tabs/soap-tab/soap-tab';
@@ -20,6 +21,7 @@ import { ReceitaTabComponent } from '@pages/user/shared/teleconsultation/tabs/re
 import { ReferralTabComponent } from '@pages/user/shared/teleconsultation/tabs/referral-tab/referral-tab';
 import { ReturnTabComponent } from '@pages/user/shared/teleconsultation/tabs/return-tab/return-tab';
 import { getAllDetailsTabs, TabConfig } from '@pages/user/shared/teleconsultation/tabs/tab-config';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-appointment-details',
@@ -47,7 +49,7 @@ import { getAllDetailsTabs, TabConfig } from '@pages/user/shared/teleconsultatio
   templateUrl: './appointment-details.html',
   styleUrls: ['./appointment-details.scss']
 })
-export class AppointmentDetailsComponent implements OnInit {
+export class AppointmentDetailsComponent implements OnInit, OnDestroy {
   appointment: Appointment | null = null;
   appointmentId: string | null = null;
   loading = false;
@@ -56,12 +58,20 @@ export class AppointmentDetailsComponent implements OnInit {
   // Tabs - usando configuração centralizada
   activeTab = 'basic';
   availableTabs: TabConfig[] = getAllDetailsTabs();
+  
+  private destroy$ = new Subject<void>();
+  private isBrowser: boolean;
 
   private appointmentsService = inject(AppointmentsService);
   private authService = inject(AuthService);
+  private teleconsultationRealTime = inject(TeleconsultationRealTimeService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
+
+  constructor(@Inject(PLATFORM_ID) private platformId: Object) {
+    this.isBrowser = isPlatformBrowser(platformId);
+  }
 
   ngOnInit(): void {
     this.determineuserrole();
@@ -71,8 +81,63 @@ export class AppointmentDetailsComponent implements OnInit {
     this.authService.authState$.subscribe((state) => {
       if (state.isAuthenticated && this.appointmentId && !this.appointment) {
         this.loadAppointment(this.appointmentId);
+        
+        // Setup real-time connection
+        if (this.isBrowser) {
+          this.setupRealTimeConnection();
+        }
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    
+    // Leave consultation room
+    if (this.appointmentId) {
+      this.teleconsultationRealTime.leaveConsultation(this.appointmentId);
+    }
+  }
+
+  private setupRealTimeConnection(): void {
+    if (!this.appointmentId) return;
+
+    // Join consultation room to receive updates
+    this.teleconsultationRealTime.joinConsultation(this.appointmentId).catch(error => {
+      console.error('[AppointmentDetails] Erro ao conectar tempo real:', error);
+    });
+
+    // Listen for data updates and reload appointment
+    this.teleconsultationRealTime.dataUpdated$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((event: DataUpdatedEvent) => {
+        // Update appointment data based on the event type
+        if (this.appointment && event.data) {
+          if (event.dataType === 'soap') {
+            this.appointment = { 
+              ...this.appointment, 
+              soapJson: JSON.stringify(event.data) 
+            };
+          } else if (event.dataType === 'anamnesis') {
+            this.appointment = { 
+              ...this.appointment, 
+              anamnesisJson: JSON.stringify(event.data) 
+            };
+          } else if (event.dataType === 'preConsultation') {
+            this.appointment = { 
+              ...this.appointment, 
+              preConsultationJson: JSON.stringify(event.data) 
+            };
+          } else if (event.dataType === 'specialtyFields') {
+            this.appointment = { 
+              ...this.appointment, 
+              specialtyFieldsJson: JSON.stringify(event.data) 
+            };
+          }
+          this.cdr.detectChanges();
+        }
+      });
   }
 
   determineuserrole() {

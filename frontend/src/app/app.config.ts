@@ -1,6 +1,7 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners, APP_INITIALIZER } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import { provideMarkdown } from 'ngx-markdown';
 
 import { routes } from '@app/app.routes';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
@@ -22,6 +23,7 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([authInterceptor])
     ),
     provideClientHydration(withEventReplay()),
+    provideMarkdown(),
     {
       provide: APP_INITIALIZER,
       useFactory: initializeAuth,

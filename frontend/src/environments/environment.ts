@@ -2,7 +2,6 @@
 // Este arquivo é gerado automaticamente pelo script generate-env.js
 // NÃO EDITE MANUALMENTE - Edite o arquivo .env na raiz do projeto
 // ========================================
-// Ambiente: Desenvolvimento Local (ng serve)
 
 // Determina dinamicamente a URL da API baseado no host atual
 const getApiUrl = () => {

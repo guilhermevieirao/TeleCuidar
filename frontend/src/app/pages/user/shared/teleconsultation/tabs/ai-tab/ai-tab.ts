@@ -1,6 +1,7 @@
 import { Component, Input, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MarkdownModule } from 'ngx-markdown';
 import { ButtonComponent } from '@shared/components/atoms/button/button';
 import { IconComponent } from '@shared/components/atoms/icon/icon';
 import { AIService, GenerateSummaryRequest, GenerateDiagnosisRequest, AIData } from '@core/services/ai.service';
@@ -9,7 +10,7 @@ import { Appointment } from '@core/services/appointments.service';
 @Component({
   selector: 'app-ai-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, ButtonComponent, IconComponent],
+  imports: [CommonModule, FormsModule, MarkdownModule, ButtonComponent, IconComponent],
   templateUrl: './ai-tab.html',
   styleUrls: ['./ai-tab.scss']
 })

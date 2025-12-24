@@ -206,12 +206,141 @@
           }
         }
 
-        .markdown-content {
+        .markdown-content,
+        markdown {
           font-size: $font-size-sm;
           line-height: 1.6;
           color: var(--text-primary);
-          white-space: pre-wrap;
           word-wrap: break-word;
+          display: block;
+
+          // Headings
+          h1, h2, h3, h4, h5, h6 {
+            margin: $spacing-md 0 $spacing-sm 0;
+            font-weight: $font-weight-semibold;
+            color: var(--text-primary);
+
+            &:first-child {
+              margin-top: 0;
+            }
+          }
+
+          h1 {
+            font-size: $font-size-xl;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: $spacing-sm;
+          }
+
+          h2 {
+            font-size: $font-size-lg;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: $spacing-xs;
+          }
+
+          h3 {
+            font-size: $font-size-base;
+          }
+
+          h4, h5, h6 {
+            font-size: $font-size-sm;
+          }
+
+          // Paragraphs
+          p {
+            margin: $spacing-sm 0;
+          }
+
+          // Lists
+          ul, ol {
+            margin: $spacing-sm 0;
+            padding-left: $spacing-lg;
+          }
+
+          li {
+            margin: $spacing-xs 0;
+          }
+
+          // Code
+          code {
+            background: var(--neutral-100);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+            color: var(--red-600);
+          }
+
+          pre {
+            background: var(--neutral-900);
+            color: var(--neutral-100);
+            padding: $spacing-md;
+            border-radius: $radius-md;
+            overflow-x: auto;
+            margin: $spacing-sm 0;
+
+            code {
+              background: none;
+              color: var(--neutral-100);
+              padding: 0;
+              font-size: $font-size-xs;
+            }
+          }
+
+          // Blockquotes
+          blockquote {
+            border-left: 4px solid var(--primary-500);
+            padding-left: $spacing-md;
+            margin: $spacing-md 0;
+            color: var(--text-secondary);
+            font-style: italic;
+          }
+
+          // Links
+          a {
+            color: var(--primary-600);
+            text-decoration: none;
+
+            &:hover {
+              text-decoration: underline;
+            }
+          }
+
+          // Horizontal rule
+          hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: $spacing-md 0;
+          }
+
+          // Strong and emphasis
+          strong, b {
+            font-weight: $font-weight-semibold;
+          }
+
+          em, i {
+            font-style: italic;
+          }
+
+          // Tables (if supported)
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: $spacing-md 0;
+
+            thead {
+              background: var(--neutral-100);
+            }
+
+            th, td {
+              border: 1px solid var(--border);
+              padding: $spacing-xs $spacing-sm;
+              text-align: left;
+            }
+
+            th {
+              font-weight: $font-weight-semibold;
+            }
+          }
         }
       }
 

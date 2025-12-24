@@ -554,15 +554,81 @@ export class ReferralTabComponent implements OnDestroy, OnChanges {
         if (dayChecks.length > 0) {
           forkJoin(dayChecks).subscribe({
             next: (results) => {
+              // Agora buscar a disponibilidade real de slots para cada dia
+              const availabilityChecks: Observable<{ date: Date, totalSlots: number, professionalsCount: number }>[] = [];
+              
               results.forEach(result => {
-                this.calendarDays.push({
-                  date: result.date,
-                  slots: result.availableProfessionals > 0 ? Math.floor(Math.random() * 5) + 1 : 0,
-                  professionalsCount: result.availableProfessionals,
-                  available: result.availableProfessionals > 0
-                });
+                if (result.availableProfessionals > 0) {
+                  // Buscar disponibilidade real dos profissionais neste dia
+                  const dayStart = new Date(result.date);
+                  dayStart.setHours(0, 0, 0, 0);
+                  const dayEnd = new Date(result.date);
+                  dayEnd.setHours(23, 59, 59, 999);
+                  
+                  // Criar observable para buscar slots de todos os profissionais
+                  availabilityChecks.push(
+                    new Observable((observer: Observer<{ date: Date, totalSlots: number, professionalsCount: number }>) => {
+                      forkJoin(professionals.map(pro => 
+                        this.schedulesService.getAvailability(pro.id, dayStart, dayEnd)
+                      )).subscribe({
+                        next: (availabilities) => {
+                          const totalSlots = availabilities.reduce((sum, avail) => {
+                            return sum + (avail.slots?.filter(s => s.isAvailable).length || 0);
+                          }, 0);
+                          observer.next({ 
+                            date: result.date, 
+                            totalSlots, 
+                            professionalsCount: result.availableProfessionals 
+                          });
+                          observer.complete();
+                        },
+                        error: () => {
+                          // Em caso de erro, usar valor estimado baseado nos profissionais
+                          observer.next({ 
+                            date: result.date, 
+                            totalSlots: result.availableProfessionals * 8, // Estimativa: 8 slots por profissional
+                            professionalsCount: result.availableProfessionals 
+                          });
+                          observer.complete();
+                        }
+                      });
+                    })
+                  );
+                } else {
+                  this.calendarDays.push({
+                    date: result.date,
+                    slots: 0,
+                    professionalsCount: 0,
+                    available: false
+                  });
+                }
               });
-              this.cdr.detectChanges();
+              
+              // Processar verificações de disponibilidade
+              if (availabilityChecks.length > 0) {
+                forkJoin(availabilityChecks).subscribe({
+                  next: (slotResults) => {
+                    slotResults.forEach(sr => {
+                      this.calendarDays.push({
+                        date: sr.date,
+                        slots: sr.totalSlots,
+                        professionalsCount: sr.professionalsCount,
+                        available: sr.totalSlots > 0
+                      });
+                    });
+                    // Ordenar por data
+                    this.calendarDays.sort((a, b) => a.date.getTime() - b.date.getTime());
+                    this.cdr.detectChanges();
+                  },
+                  error: () => {
+                    this.calendarDays.sort((a, b) => a.date.getTime() - b.date.getTime());
+                    this.cdr.detectChanges();
+                  }
+                });
+              } else {
+                this.calendarDays.sort((a, b) => a.date.getTime() - b.date.getTime());
+                this.cdr.detectChanges();
+              }
             },
             error: (err) => {
               console.error('Erro ao verificar bloqueios:', err);

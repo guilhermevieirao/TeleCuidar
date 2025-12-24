@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, OnChanges, SimpleChanges, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { IconComponent } from '@shared/components/atoms/icon/icon';
@@ -14,7 +14,7 @@ import { Subject, takeUntil, debounceTime } from 'rxjs';
   templateUrl: './anamnesis-tab.html',
   styleUrls: ['./anamnesis-tab.scss']
 })
-export class AnamnesisTabComponent implements OnInit, OnDestroy {
+export class AnamnesisTabComponent implements OnInit, OnDestroy, OnChanges {
   @Input() appointmentId: string | null = null;
   @Input() appointment: Appointment | null = null;
   @Input() userrole: 'PATIENT' | 'PROFESSIONAL' | 'ADMIN' = 'PROFESSIONAL';
@@ -24,6 +24,8 @@ export class AnamnesisTabComponent implements OnInit, OnDestroy {
   isSaving = false;
   lastSaved: Date | null = null;
   private destroy$ = new Subject<void>();
+  private dataLoaded = false;
+  private isReceivingUpdate = false; // Flag para evitar loop de atualizações
 
   constructor(
     private fb: FormBuilder,
@@ -80,10 +82,13 @@ export class AnamnesisTabComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.loadAnamnesisData();
-    
     // Setup real-time subscriptions
     this.setupRealTimeSubscriptions();
+    
+    // Carregar dados existentes se já tiver appointment
+    if (this.appointment && !this.dataLoaded) {
+      this.loadAnamnesisData();
+    }
     
     // Desabilitar para pacientes ou modo readonly (somente visualização)
     if (this.userrole === 'PATIENT' || this.readonly) {
@@ -92,16 +97,41 @@ export class AnamnesisTabComponent implements OnInit, OnDestroy {
     }
     
     // Auto-save on value changes (debounced) - apenas para profissionais
+    // Enviar preview em tempo real (debounce curto)
     this.anamnesisForm.valueChanges
       .pipe(
         takeUntil(this.destroy$),
-        debounceTime(2000)
+        debounceTime(300) // 300ms para preview em tempo real
       )
       .subscribe(() => {
-        if (this.anamnesisForm.dirty) {
+        if (!this.isReceivingUpdate && this.appointmentId) {
+          // Notificar outros participantes sobre a mudança (preview)
+          this.teleconsultationRealTime.notifyDataUpdated(
+            this.appointmentId,
+            'anamnesis',
+            this.anamnesisForm.value
+          );
+        }
+      });
+    
+    // Salvar no banco com debounce maior
+    this.anamnesisForm.valueChanges
+      .pipe(
+        takeUntil(this.destroy$),
+        debounceTime(2000) // 2s para salvar no banco
+      )
+      .subscribe(() => {
+        if (this.anamnesisForm.dirty && !this.isReceivingUpdate) {
           this.saveAnamnesis();
         }
       });
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    // Quando appointment mudar e ainda não carregamos os dados, carregar
+    if (changes['appointment'] && changes['appointment'].currentValue && !this.dataLoaded) {
+      this.loadAnamnesisData();
+    }
   }
 
   private setupRealTimeSubscriptions(): void {
@@ -110,10 +140,18 @@ export class AnamnesisTabComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((event: DataUpdatedEvent) => {
         if (event.data) {
+          // Marcar que estamos recebendo uma atualização para evitar loop
+          this.isReceivingUpdate = true;
+          
           // Update form with received data
           this.anamnesisForm.patchValue(event.data, { emitEvent: false });
           this.anamnesisForm.markAsPristine();
           this.cdr.detectChanges();
+          
+          // Liberar flag após um pequeno delay
+          setTimeout(() => {
+            this.isReceivingUpdate = false;
+          }, 100);
         }
       });
   }
@@ -130,9 +168,13 @@ export class AnamnesisTabComponent implements OnInit, OnDestroy {
         const anamnesisData = JSON.parse(this.appointment.anamnesisJson);
         this.anamnesisForm.patchValue(anamnesisData);
         this.anamnesisForm.markAsPristine();
+        this.dataLoaded = true;
       } catch (error) {
         console.error('Erro ao carregar dados da anamnese:', error);
       }
+    } else if (this.appointment) {
+      // Appointment existe mas não tem dados de anamnese ainda
+      this.dataLoaded = true;
     }
   }
 
@@ -151,13 +193,6 @@ export class AnamnesisTabComponent implements OnInit, OnDestroy {
           this.lastSaved = new Date();
           this.anamnesisForm.markAsPristine();
           this.cdr.detectChanges();
-          
-          // Notify other participant via SignalR
-          this.teleconsultationRealTime.notifyDataUpdated(
-            this.appointmentId!,
-            'anamnesis',
-            this.anamnesisForm.value
-          );
         },
         error: (error) => {
           console.error('Erro ao salvar anamnese:', error);
