@@ -453,6 +453,7 @@ export class ReceitaTabComponent implements OnInit, OnDestroy {
         this.isSigning = false;
         this.selectedSavedCert = null;
         this.certPasswordForSign = '';
+        this.cdr.detectChanges();
         
         // Download the signed PDF
         this.downloadPdf(pdf.pdfBase64, pdf.fileName);
@@ -468,6 +469,7 @@ export class ReceitaTabComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         this.isSigning = false;
+        this.cdr.detectChanges();
         this.modalService.alert({
           title: 'Erro',
           message: error.error?.message || 'Erro ao gerar PDF assinado.',
@@ -527,6 +529,7 @@ export class ReceitaTabComponent implements OnInit, OnDestroy {
         next: (info) => {
           this.isValidatingPfx = false;
           this.saveCertInfo = info;
+          this.cdr.detectChanges();
           if (!info.isValid) {
             this.modalService.alert({
               title: 'Certificado Invalido',
@@ -540,6 +543,7 @@ export class ReceitaTabComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.isValidatingPfx = false;
+          this.cdr.detectChanges();
           this.modalService.alert({
             title: 'Erro',
             message: error.error?.message || 'Erro ao validar certificado.',
@@ -549,6 +553,7 @@ export class ReceitaTabComponent implements OnInit, OnDestroy {
       });
     } catch {
       this.isValidatingPfx = false;
+      this.cdr.detectChanges();
       this.modalService.alert({
         title: 'Erro',
         message: 'Erro ao ler arquivo do certificado.',
@@ -574,6 +579,7 @@ export class ReceitaTabComponent implements OnInit, OnDestroy {
       }).subscribe({
         next: () => {
           this.isSigning = false;
+          this.cdr.detectChanges();
           this.closeSaveCertModal();
           this.modalService.alert({
             title: 'Sucesso',
@@ -583,6 +589,7 @@ export class ReceitaTabComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.isSigning = false;
+          this.cdr.detectChanges();
           this.modalService.alert({
             title: 'Erro',
             message: error.error?.message || 'Erro ao salvar certificado.',
@@ -592,6 +599,7 @@ export class ReceitaTabComponent implements OnInit, OnDestroy {
       });
     } catch {
       this.isSigning = false;
+      this.cdr.detectChanges();
       this.modalService.alert({
         title: 'Erro',
         message: 'Erro ao processar certificado.',
@@ -656,6 +664,7 @@ export class ReceitaTabComponent implements OnInit, OnDestroy {
           this.isSigning = false;
           this.pfxFile = null;
           this.pfxPassword = '';
+          this.cdr.detectChanges();
           
           // Download the signed PDF
           this.downloadPdf(pdf.pdfBase64, pdf.fileName);
@@ -671,6 +680,7 @@ export class ReceitaTabComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.isSigning = false;
+          this.cdr.detectChanges();
           this.modalService.alert({
             title: 'Erro',
             message: error.error?.message || 'Erro ao assinar PDF. Verifique a senha do certificado.',
@@ -682,6 +692,7 @@ export class ReceitaTabComponent implements OnInit, OnDestroy {
     
     reader.onerror = () => {
       this.isSigning = false;
+      this.cdr.detectChanges();
       this.modalService.alert({
         title: 'Erro',
         message: 'Erro ao ler o arquivo do certificado.',

@@ -150,6 +150,7 @@ export class AnamnesisTabComponent implements OnInit, OnDestroy {
           this.isSaving = false;
           this.lastSaved = new Date();
           this.anamnesisForm.markAsPristine();
+          this.cdr.detectChanges();
           
           // Notify other participant via SignalR
           this.teleconsultationRealTime.notifyDataUpdated(
@@ -161,6 +162,7 @@ export class AnamnesisTabComponent implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Erro ao salvar anamnese:', error);
           this.isSaving = false;
+          this.cdr.detectChanges();
         }
       });
   }

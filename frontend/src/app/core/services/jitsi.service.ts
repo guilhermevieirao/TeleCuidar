@@ -1,4 +1,4 @@
-import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID, NgZone } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
 import { Observable, BehaviorSubject, of } from 'rxjs';
@@ -149,7 +149,8 @@ export class JitsiService {
 
   constructor(
     private http: HttpClient,
-    @Inject(PLATFORM_ID) private platformId: Object
+    @Inject(PLATFORM_ID) private platformId: Object,
+    private ngZone: NgZone
   ) {}
 
   /**
@@ -363,18 +364,26 @@ export class JitsiService {
         lang: 'ptBR'
       });
 
-      // Configurar permissões do iframe para câmera e microfone
-      // A JitsiMeetExternalAPI cria um iframe, mas não define o atributo 'allow'
-      // que é necessário para a Permissions Policy do navegador
-      const container = document.getElementById(containerId);
-      if (container) {
+      // Configurar permissões do iframe para câmera e microfone.
+      // A JitsiMeetExternalAPI cria o iframe de forma assíncrona, então tentamos
+      // aplicar o atributo `allow` com várias tentativas até o iframe existir.
+      const trySetIframeAllow = (attempts = 0) => {
+        const container = document.getElementById(containerId);
+        if (!container) return;
         const iframe = container.querySelector('iframe');
         if (iframe) {
-          iframe.setAttribute('allow', 
-            'camera; microphone; display-capture; autoplay; clipboard-write; speaker-selection; fullscreen'
-          );
+          try {
+            iframe.setAttribute('allow', 'camera; microphone; display-capture; autoplay; clipboard-write; fullscreen');
+          } catch (e) {
+            // ignore
+          }
+          return;
         }
-      }
+        if (attempts < 10) {
+          setTimeout(() => trySetIframeAllow(attempts + 1), 100);
+        }
+      };
+      trySetIframeAllow();
 
       // Event listeners
       this.setupEventListeners(options);
@@ -461,7 +470,11 @@ export class JitsiService {
    * Atualiza o estado da chamada
    */
   private updateCallState(updates: Partial<JitsiCallState>): void {
-    this.callState.next({ ...this.callState.value, ...updates });
+    const nextState = { ...this.callState.value, ...updates };
+    // Garantir que a emissão aconteça dentro do NgZone para disparar
+    // a detecção de mudanças do Angular quando eventos externos (iframe)
+    // atualizam o estado.
+    this.ngZone.run(() => this.callState.next(nextState));
   }
 
   /**
@@ -544,7 +557,8 @@ export class JitsiService {
       this.jitsiApi.dispose();
       this.jitsiApi = null;
     }
-    this.callState.next({
+
+    this.updateCallState({
       isConnected: false,
       isLoading: false,
       isMuted: false,

@@ -147,4 +147,22 @@ public class TeleconsultationHub : Hub
             Timestamp = DateTime.UtcNow
         });
     }
+
+    /// <summary>
+    /// Registra um token de upload mobile para receber notificações
+    /// </summary>
+    public async Task RegisterMobileUploadToken(string token)
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, $"mobile_upload_{token}");
+        _logger.LogInformation("Cliente {ConnectionId} registrado para uploads com token {Token}", Context.ConnectionId, token);
+    }
+
+    /// <summary>
+    /// Remove registro do token de upload mobile
+    /// </summary>
+    public async Task UnregisterMobileUploadToken(string token)
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"mobile_upload_{token}");
+        _logger.LogInformation("Cliente {ConnectionId} removido de uploads com token {Token}", Context.ConnectionId, token);
+    }
 }

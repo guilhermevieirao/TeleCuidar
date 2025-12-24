@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, OnInit, OnDestroy } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnInit, OnDestroy, OnChanges, SimpleChanges, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IconComponent } from '@shared/components/atoms/icon/icon';
 import { BiometricsTabComponent } from '../tabs/biometrics-tab/biometrics-tab';
@@ -43,7 +43,7 @@ import { Subject, takeUntil } from 'rxjs';
   templateUrl: './teleconsultation-sidebar.html',
   styleUrls: ['./teleconsultation-sidebar.scss']
 })
-export class TeleconsultationSidebarComponent implements OnInit, OnDestroy {
+export class TeleconsultationSidebarComponent implements OnInit, OnDestroy, OnChanges {
   @Input() isOpen = false;
   @Input() isFullScreen = false;
   @Input() isHeaderVisible = true;
@@ -63,7 +63,17 @@ export class TeleconsultationSidebarComponent implements OnInit, OnDestroy {
   isListening = false;
   private destroy$ = new Subject<void>();
 
-  constructor(private dictationService: DictationService) {}
+  constructor(private dictationService: DictationService, private cdr: ChangeDetectorRef) {}
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['tabs'] || changes['activeTab'] || changes['appointment'] || changes['isOpen']) {
+      try {
+        this.cdr.detectChanges();
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
 
   ngOnInit() {
     this.dictationService.isDictationActive$

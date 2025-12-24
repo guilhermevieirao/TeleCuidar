@@ -108,6 +108,7 @@ export class BiometricsTabComponent implements OnInit, OnDestroy {
             this.lastUpdated = new Date(data.lastUpdated);
           }
         }
+        this.cdr.detectChanges();
       });
   }
 
@@ -115,6 +116,7 @@ export class BiometricsTabComponent implements OnInit, OnDestroy {
     if (!this.appointmentId) return;
     
     this.isSaving = true;
+    this.cdr.detectChanges();
     this.biometricsService.saveBiometrics(this.appointmentId, data);
     this.lastUpdated = new Date();
     
@@ -128,6 +130,7 @@ export class BiometricsTabComponent implements OnInit, OnDestroy {
     // Reset saving indicator after a delay
     setTimeout(() => {
       this.isSaving = false;
+      this.cdr.detectChanges();
     }, 500);
   }
 

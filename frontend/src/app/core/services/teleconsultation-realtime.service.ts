@@ -45,6 +45,13 @@ export interface ChatMessageEvent {
   timestamp: Date;
 }
 
+export interface MobileUploadEvent {
+  title: string;
+  type: string;
+  fileUrl: string;
+  timestamp: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -81,6 +88,9 @@ export class TeleconsultationRealTimeService implements OnDestroy {
   
   private _chatMessage$ = new Subject<ChatMessageEvent>();
   public chatMessage$ = this._chatMessage$.asObservable();
+  
+  private _mobileUploadReceived$ = new Subject<MobileUploadEvent>();
+  public mobileUploadReceived$ = this._mobileUploadReceived$.asObservable();
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
@@ -176,6 +186,10 @@ export class TeleconsultationRealTimeService implements OnDestroy {
       this.ngZone.run(() => this._chatMessage$.next(event));
     });
 
+    this.hubConnection.on('MobileUploadReceived', (event: MobileUploadEvent) => {
+      this.ngZone.run(() => this._mobileUploadReceived$.next(event));
+    });
+
     // Handle reconnection
     this.hubConnection.onreconnected(() => {
       console.log('[TeleconsultationRealTime] Reconectado ao hub');
@@ -236,6 +250,21 @@ export class TeleconsultationRealTimeService implements OnDestroy {
   async sendChatMessage(appointmentId: string, message: string, senderRole: string): Promise<void> {
     if (this.hubConnection) {
       await this.hubConnection.invoke('SendChatMessage', appointmentId, message, senderRole);
+    }
+  }
+
+  async registerMobileUploadToken(token: string): Promise<void> {
+    await this.connect();
+    if (this.hubConnection) {
+      await this.hubConnection.invoke('RegisterMobileUploadToken', token);
+      console.log('[TeleconsultationRealTime] Registrado para uploads com token:', token);
+    }
+  }
+
+  async unregisterMobileUploadToken(token: string): Promise<void> {
+    if (this.hubConnection) {
+      await this.hubConnection.invoke('UnregisterMobileUploadToken', token);
+      console.log('[TeleconsultationRealTime] Removido de uploads com token:', token);
     }
   }
 

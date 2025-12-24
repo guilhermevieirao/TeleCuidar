@@ -9,7 +9,8 @@ import {
   ViewChild,
   Inject,
   PLATFORM_ID,
-  AfterViewInit
+  AfterViewInit,
+  ChangeDetectorRef
 } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { JitsiService, JitsiToken, JitsiCallState } from '@core/services/jitsi.service';
@@ -61,7 +62,8 @@ export class JitsiVideoComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     private jitsiService: JitsiService,
     private themeService: ThemeService,
-    @Inject(PLATFORM_ID) private platformId: Object
+    @Inject(PLATFORM_ID) private platformId: Object,
+    private cdr: ChangeDetectorRef
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
   }
@@ -86,7 +88,12 @@ export class JitsiVideoComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     if (this.isBrowser && this.appointmentId) {
-      this.initializeCall();
+      // Executar a inicialização assincronamente para evitar
+      // ExpressionChangedAfterItHasBeenCheckedError quando o
+      // estado interno é atualizado durante o ciclo de vida do Angular.
+      setTimeout(() => {
+        this.initializeCall();
+      }, 0);
     }
   }
 
@@ -107,6 +114,8 @@ export class JitsiVideoComponent implements OnInit, AfterViewInit, OnDestroy {
       this.errorMessage = state.error;
       this.errorOccurred.emit(state.error || 'Erro desconhecido');
     }
+    // Forçar detecção para garantir que o template reflita mudanças
+    try { this.cdr.detectChanges(); } catch (e) { /* noop */ }
   }
 
   async initializeCall(): Promise<void> {
@@ -145,10 +154,12 @@ export class JitsiVideoComponent implements OnInit, AfterViewInit, OnDestroy {
       });
 
       this.isLoading = false;
+      try { this.cdr.detectChanges(); } catch (e) { /* noop */ }
     } catch (error) {
       this.isLoading = false;
       this.errorMessage = error instanceof Error ? error.message : 'Erro ao iniciar videochamada';
       this.errorOccurred.emit(this.errorMessage || 'Erro desconhecido');
+      try { this.cdr.detectChanges(); } catch (e) { /* noop */ }
     }
   }
 

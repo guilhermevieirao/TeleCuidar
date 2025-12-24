@@ -110,6 +110,7 @@ export class SoapTabComponent implements OnInit, OnDestroy {
           this.isSaving = false;
           this.lastSaved = new Date();
           this.soapForm.markAsPristine();
+          this.cdr.detectChanges();
           
           // Notify other participant via SignalR
           this.teleconsultationRealTime.notifyDataUpdated(
@@ -121,6 +122,7 @@ export class SoapTabComponent implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Erro ao salvar SOAP:', error);
           this.isSaving = false;
+          this.cdr.detectChanges();
         }
       });
   }

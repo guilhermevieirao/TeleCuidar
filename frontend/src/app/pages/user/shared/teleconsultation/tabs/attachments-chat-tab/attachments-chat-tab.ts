@@ -9,7 +9,7 @@ import { AttachmentsChatService, AttachmentMessage } from '@core/services/attach
 import { TemporaryUploadService } from '@core/services/temporary-upload.service';
 import { ModalService } from '@core/services/modal.service';
 import { DeviceDetectorService } from '@core/services/device-detector.service';
-import { TeleconsultationRealTimeService, AttachmentEvent } from '@core/services/teleconsultation-realtime.service';
+import { TeleconsultationRealTimeService, AttachmentEvent, MobileUploadEvent } from '@core/services/teleconsultation-realtime.service';
 import { Subject, takeUntil } from 'rxjs';
 
 interface PendingFile {
@@ -55,7 +55,6 @@ export class AttachmentsChatTabComponent implements OnInit, OnDestroy {
   isQrCodeModalOpen = false;
   mobileUploadUrl = '';
   mobileUploadToken = '';
-  private pollingInterval: any;
 
   // Preview State
   previewModalOpen = false;
@@ -88,6 +87,7 @@ export class AttachmentsChatTabComponent implements OnInit, OnDestroy {
         .subscribe(msgs => {
           this.messages = msgs;
           this.scrollToBottom();
+          try { this.cdr.detectChanges(); } catch (e) { /* noop */ }
         });
       
       // Setup real-time subscriptions
@@ -100,7 +100,10 @@ export class AttachmentsChatTabComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
-    this.stopPolling();
+    // Unregister mobile upload token if active
+    if (this.mobileUploadToken) {
+      this.teleconsultationRealTime.unregisterMobileUploadToken(this.mobileUploadToken);
+    }
   }
 
   private setupRealTimeSubscriptions(): void {
@@ -127,6 +130,13 @@ export class AttachmentsChatTabComponent implements OnInit, OnDestroy {
           this.messages = this.messages.filter(m => m.id !== event.attachmentId);
           this.cdr.detectChanges();
         }
+      });
+
+    // Listen for mobile uploads via SignalR
+    this.teleconsultationRealTime.mobileUploadReceived$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((event: MobileUploadEvent) => {
+        this.handleMobileUploadReceived(event);
       });
   }
 
@@ -208,6 +218,7 @@ export class AttachmentsChatTabComponent implements OnInit, OnDestroy {
       });
     }
     this.isAddingAttachment = true;
+    this.cdr.detectChanges();
   }
 
   private createPreviewUrl(file: File): Promise<string> {
@@ -239,6 +250,7 @@ export class AttachmentsChatTabComponent implements OnInit, OnDestroy {
     this.selectedFile = null;
     this.selectedFilePreview = null;
     this.attachmentTitle = '';
+    try { this.cdr.detectChanges(); } catch (e) { /* noop */ }
   }
 
   // ====== SEND ATTACHMENTS ======
@@ -286,6 +298,7 @@ export class AttachmentsChatTabComponent implements OnInit, OnDestroy {
       }).subscribe();
     } finally {
       this.isUploading = false;
+      try { this.cdr.detectChanges(); } catch (e) { /* noop */ }
     }
   }
 
@@ -303,131 +316,66 @@ export class AttachmentsChatTabComponent implements OnInit, OnDestroy {
     if (!this.mobileUploadToken) {
       this.mobileUploadToken = Math.random().toString(36).substring(7);
       this.mobileUploadUrl = `${window.location.origin}/mobile-upload?token=${this.mobileUploadToken}`;
-      this.startPolling();
+      // Register for SignalR notifications in background
+      this.teleconsultationRealTime.registerMobileUploadToken(this.mobileUploadToken);
     }
     this.isQrCodeModalOpen = true;
   }
 
-  regenerateQrCode() {
-    this.stopPolling();
+  async regenerateQrCode() {
+    // Unregister old token
+    if (this.mobileUploadToken) {
+      await this.teleconsultationRealTime.unregisterMobileUploadToken(this.mobileUploadToken);
+    }
+    // Generate new token
     this.mobileUploadToken = Math.random().toString(36).substring(7);
     this.mobileUploadUrl = `${window.location.origin}/mobile-upload?token=${this.mobileUploadToken}`;
-    this.startPolling();
+    // Register for SignalR notifications
+    await this.teleconsultationRealTime.registerMobileUploadToken(this.mobileUploadToken);
   }
 
   closeQrCodeModal() {
     this.isQrCodeModalOpen = false;
-    // Keep polling active even with modal closed
+    // Keep SignalR subscription active even with modal closed
   }
 
-  startPolling() {
-    this.pollingInterval = setInterval(() => {
-      this.checkMobileUpload();
-    }, 2000);
-  }
+  /**
+   * Handles mobile upload received via SignalR (instant notification)
+   */
+  private handleMobileUploadReceived(event: MobileUploadEvent) {
+    if (!this.appointmentId) return;
 
-  stopPolling() {
-    if (this.pollingInterval) {
-      clearInterval(this.pollingInterval);
-      this.pollingInterval = null;
-    }
-  }
-
-  checkMobileUpload() {
-    if (!this.mobileUploadToken || !this.appointmentId) return;
-
-    this.temporaryUploadService.checkUpload(this.mobileUploadToken).subscribe({
-      next: (exists) => {
-        if (exists) {
-          this.fetchAllPendingUploads();
-        }
-      }
-    });
-  }
-
-  private fetchAllPendingUploads() {
-    const receivedFiles: string[] = [];
-    
-    const fetchNext = () => {
-      this.temporaryUploadService.getUpload(this.mobileUploadToken).subscribe({
-        next: (payload) => {
-          if (payload && this.appointmentId) {
-            // Add directly to chat as a message
-            const newMessage: AttachmentMessage = {
-              id: crypto.randomUUID(),
-              senderRole: this.userrole === 'PROFESSIONAL' ? 'PROFESSIONAL' : 'PATIENT',
-              senderName: this.userrole === 'PROFESSIONAL' ? 'Profissional' : 'Paciente',
-              timestamp: new Date().toISOString(),
-              title: payload.title,
-              fileName: payload.title,
-              fileType: payload.type === 'image' ? 'image/jpeg' : 'application/octet-stream',
-              fileSize: 0,
-              fileUrl: payload.fileUrl
-            };
-            
-            // Aguardar resposta antes de buscar próximo
-            this.chatService.addMessage(this.appointmentId!, newMessage).subscribe({
-              next: () => {
-                receivedFiles.push(payload.title);
-                
-                // Notify other participant via SignalR
-                this.teleconsultationRealTime.notifyAttachmentAdded(this.appointmentId!, newMessage);
-                
-                // Check if there are more uploads
-                this.temporaryUploadService.checkUpload(this.mobileUploadToken).subscribe({
-                  next: (moreExists) => {
-                    if (moreExists) {
-                      fetchNext();
-                    } else {
-                      this.showUploadNotification(receivedFiles);
-                    }
-                  }
-                });
-              },
-              error: () => {
-                // Mesmo com erro, continuar para próximo
-                this.temporaryUploadService.checkUpload(this.mobileUploadToken).subscribe({
-                  next: (moreExists) => {
-                    if (moreExists) {
-                      fetchNext();
-                    } else if (receivedFiles.length > 0) {
-                      this.showUploadNotification(receivedFiles);
-                    }
-                  }
-                });
-              }
-            });
-          } else {
-            if (receivedFiles.length > 0) {
-              this.showUploadNotification(receivedFiles);
-            }
-          }
-        },
-        error: () => {
-          if (receivedFiles.length > 0) {
-            this.showUploadNotification(receivedFiles);
-          }
-        }
-      });
+    // Create message from the received upload
+    const newMessage: AttachmentMessage = {
+      id: crypto.randomUUID(),
+      senderRole: this.userrole === 'PROFESSIONAL' ? 'PROFESSIONAL' : 'PATIENT',
+      senderName: this.userrole === 'PROFESSIONAL' ? 'Profissional' : 'Paciente',
+      timestamp: new Date().toISOString(),
+      title: event.title,
+      fileName: event.title,
+      fileType: event.type === 'image' ? 'image/jpeg' : 'application/octet-stream',
+      fileSize: 0,
+      fileUrl: event.fileUrl
     };
-    
-    fetchNext();
-  }
 
-  private showUploadNotification(files: string[]) {
-    const count = files.length;
-    let message: string;
-    
-    if (count === 1) {
-      message = `Arquivo "${files[0]}" enviado! Você pode enviar mais arquivos.`;
-    } else {
-      message = `${count} arquivos enviados! Você pode enviar mais arquivos.`;
-    }
-    
-    this.modalService.alert({
-      title: 'Upload Recebido',
-      message: message,
-      variant: 'success'
+    // Add to chat
+    this.chatService.addMessage(this.appointmentId, newMessage).subscribe({
+      next: () => {
+        // Notify other participant via SignalR
+        this.teleconsultationRealTime.notifyAttachmentAdded(this.appointmentId!, newMessage);
+        
+        // Show notification
+        this.modalService.alert({
+          title: 'Upload Recebido',
+          message: `Arquivo "${event.title}" enviado! Você pode enviar mais arquivos.`,
+          variant: 'success'
+        }).subscribe();
+        
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Erro ao salvar upload mobile:', err);
+      }
     });
   }
 
@@ -436,6 +384,7 @@ export class AttachmentsChatTabComponent implements OnInit, OnDestroy {
     const files = event.target.files;
     if (files && files.length > 0) {
       this.handleMultipleFiles(files);
+      this.cdr.detectChanges();
       // Auto-send for streamlined mobile UX
       setTimeout(() => {
         this.sendAttachments();

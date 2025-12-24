@@ -80,6 +80,15 @@
 
   <!-- Upload Area -->
   @if (!readonly) {
+    <!-- Hidden file input - always available -->
+    <input 
+      type="file" 
+      #fileInput 
+      (change)="onFileSelected($event)" 
+      accept="image/*,application/pdf,.doc,.docx"
+      hidden 
+      multiple>
+    
     <div class="upload-area" [class.drag-over]="isDragOver" [class.adding]="isAddingAttachment" (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
     
     <!-- Adding Multiple Files -->
@@ -111,16 +120,16 @@
       </div>
       
       <div class="add-more-files" *ngIf="pendingFiles.length > 0">
-        <button type="button" class="add-more-btn" (click)="fileInput.click()">
+        <button type="button" class="add-more-btn" (click)="addMoreFileInput.click()">
           <app-icon name="plus" [size]="16" />
           Adicionar mais arquivos
         </button>
-        <input #fileInput type="file" (change)="onFileSelected($event)" accept="image/*,application/pdf,.doc,.docx" hidden multiple>
+        <input #addMoreFileInput type="file" (change)="onFileSelected($event)" accept="image/*,application/pdf,.doc,.docx" hidden multiple>
       </div>
 
       <!-- Empty state - initial upload area -->
       <div class="upload-dropzone" *ngIf="pendingFiles.length === 0" (click)="triggerFileInput()">
-        <input #fileInput type="file" (change)="onFileSelected($event)" accept="image/*,application/pdf,.doc,.docx" hidden multiple>
+        <input #dropzoneFileInput type="file" (change)="onFileSelected($event)" accept="image/*,application/pdf,.doc,.docx" hidden multiple>
         <app-icon name="upload-cloud" [size]="48" />
         <div>
           <p><strong>Clique para fazer upload</strong> ou arraste e solte</p>
@@ -139,12 +148,6 @@
 
     <!-- Initial Actions (No file selected) -->
     <div class="upload-actions" *ngIf="!isAddingAttachment">
-      <input 
-        type="file" 
-        #fileInput 
-        (change)="onFileSelected($event)" 
-        hidden 
-        multiple>
       
       <!-- Mobile View -->
       <div class="mobile-actions" *ngIf="isMobile">
@@ -173,7 +176,7 @@
       <div class="desktop-actions" *ngIf="!isMobile">
         <p class="drag-hint">Arraste arquivos aqui ou</p>
         <div class="desktop-buttons">
-          <app-button variant="outline" (click)="startAddingAttachment(); triggerFileInput()">
+          <app-button variant="outline" (click)="triggerFileInput()">
             <app-icon name="upload-cloud" [size]="20" />
             Adicionar Anexo
           </app-button>

@@ -156,10 +156,12 @@ export class SpecialtyFieldsTabComponent implements OnInit, OnDestroy {
           this.isSaving = false;
           this.lastSaved = new Date();
           this.specialtyFieldsForm.markAsPristine();
+          this.cdr.detectChanges();
         },
         error: (error) => {
           console.error('Erro ao salvar campos da especialidade:', error);
           this.isSaving = false;
+          this.cdr.detectChanges();
         }
       });
   }

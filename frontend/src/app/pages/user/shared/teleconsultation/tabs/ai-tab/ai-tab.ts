@@ -175,11 +175,13 @@ export class AITabComponent implements OnInit {
     }).subscribe({
       next: () => {
         this.isSaving = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error saving AI data:', err);
         this.isSaving = false;
         this.errorMessage = 'Erro ao salvar dados.';
+        this.cdr.detectChanges();
       }
     });
   }

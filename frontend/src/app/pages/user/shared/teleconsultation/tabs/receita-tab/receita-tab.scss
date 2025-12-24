@@ -1175,26 +1175,28 @@
     }
   }
 
-  // Checkbox
+  // Checkbox customizado
   .cert-checkbox {
     display: flex;
     align-items: flex-start;
     gap: 12px;
     cursor: pointer;
     padding: 16px;
-    background: var(--neutral-50);
+    background: var(--neutral-50, var(--bg-secondary));
     border-radius: 12px;
     margin-top: 16px;
+    user-select: none;
+    transition: background-color 0.15s ease;
 
-    input {
-      display: none;
+    &:hover {
+      background: var(--neutral-100, var(--bg-tertiary));
     }
 
     &__box {
       width: 22px;
       height: 22px;
       background: var(--surface);
-      border: 2px solid var(--border);
+      border: 2px solid var(--border-color);
       border-radius: 6px;
       display: flex;
       align-items: center;
@@ -1203,9 +1205,9 @@
       transition: all 0.15s ease;
       color: transparent;
 
-      input:checked + & {
-        background: var(--primary-500);
-        border-color: var(--primary-500);
+      &.checked {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
         color: white;
       }
     }

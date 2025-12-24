@@ -669,16 +669,15 @@
                 </div>
 
                 <!-- Opção de segurança -->
-                <label class="cert-checkbox">
-                  <input type="checkbox" [(ngModel)]="saveCertRequirePassword" />
-                  <span class="cert-checkbox__box">
+                <div class="cert-checkbox" (click)="saveCertRequirePassword = !saveCertRequirePassword">
+                  <div class="cert-checkbox__box" [class.checked]="saveCertRequirePassword">
                     <app-icon name="check" [size]="12" />
-                  </span>
-                  <span class="cert-checkbox__text">
+                  </div>
+                  <div class="cert-checkbox__text">
                     <strong>Solicitar senha ao assinar</strong>
                     <small>Mais seguro - recomendado</small>
-                  </span>
-                </label>
+                  </div>
+                </div>
               </div>
             </div>
           }

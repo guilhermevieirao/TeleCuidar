@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Memory;
 using System.Collections.Concurrent;
+using WebAPI.Hubs;
 
 namespace WebAPI.Controllers;
 
@@ -12,11 +14,13 @@ namespace WebAPI.Controllers;
 public class TemporaryUploadsController : ControllerBase
 {
     private readonly IMemoryCache _cache;
+    private readonly IHubContext<TeleconsultationHub> _hubContext;
     private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(10);
 
-    public TemporaryUploadsController(IMemoryCache cache)
+    public TemporaryUploadsController(IMemoryCache cache, IHubContext<TeleconsultationHub> hubContext)
     {
         _cache = cache;
+        _hubContext = hubContext;
     }
 
     /// <summary>
@@ -24,7 +28,7 @@ public class TemporaryUploadsController : ControllerBase
     /// </summary>
     [HttpPost("{token}")]
     [RequestSizeLimit(10 * 1024 * 1024)] // 10MB
-    public ActionResult StoreUpload(string token, [FromBody] TemporaryUploadDto dto)
+    public async Task<ActionResult> StoreUpload(string token, [FromBody] TemporaryUploadDto dto)
     {
         if (string.IsNullOrWhiteSpace(token))
             return BadRequest(new { message = "Token é obrigatório" });
@@ -46,6 +50,15 @@ public class TemporaryUploadsController : ControllerBase
         
         // Refresh expiration
         _cache.Set(cacheKey, queue, CacheExpiration);
+
+        // Notificar via SignalR quem está escutando este token
+        await _hubContext.Clients.Group($"mobile_upload_{token}").SendAsync("MobileUploadReceived", new
+        {
+            Title = dto.Title,
+            Type = dto.Type,
+            FileUrl = dto.FileUrl,
+            Timestamp = dto.Timestamp
+        });
 
         return Ok(new { message = "Upload armazenado com sucesso" });
     }
