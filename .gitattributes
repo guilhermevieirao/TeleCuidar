@@ -1,0 +1,53 @@
+# ========================================
+# Git Attributes - TeleCuidar
+# ========================================
+# Garante consistência de line endings e encoding
+
+# Default behavior
+* text=auto
+
+# Force LF line endings for shell scripts (importante para deploy no Linux)
+*.sh text eol=lf
+deploy.sh text eol=lf
+
+# Force LF for config files (nginx, docker, etc)
+*.conf text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+Dockerfile text eol=lf
+docker-compose* text eol=lf
+
+# Environment files - IMPORTANTE: Força LF para evitar problemas no Linux
+.env text eol=lf
+.env.* text eol=lf
+*.env text eol=lf
+
+# JSON files
+*.json text eol=lf
+
+# Markdown
+*.md text eol=lf
+
+# Keep Windows line endings for Windows-specific files
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files (don't process)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.pfx binary
+*.p12 binary
+*.crt binary
+*.key binary
+*.pem binary
+
+# Fonts
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary

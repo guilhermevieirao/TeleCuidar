@@ -179,7 +179,8 @@ apt-get install -y \
     git \
     jq \
     openssl \
-    sqlite3
+    sqlite3 \
+    dos2unix
 
 log_success "Dependências instaladas"
 
@@ -384,6 +385,52 @@ else
     log_success "Certificados SSL configurados com sucesso!"
 fi
 
+# Verificar e copiar certificados de todas as fontes possíveis
+log_info "Garantindo que certificados estão nos locais corretos..."
+
+# Função para copiar certificados de forma segura
+copy_certs_from_letsencrypt() {
+    local cert_name="$1"
+    local cert_dir="/etc/letsencrypt/live/$cert_name"
+    
+    if [ -d "$cert_dir" ]; then
+        log_info "Copiando certificados de $cert_dir"
+        
+        # Certificados principais (telecuidar.crt/key)
+        if [ -f "$cert_dir/fullchain.pem" ]; then
+            cp "$cert_dir/fullchain.pem" "$SSL_DIR/telecuidar.crt"
+            cp "$cert_dir/privkey.pem" "$SSL_DIR/telecuidar.key"
+            
+            # Certificados Jitsi (meet.fullchain.pem/meet.privkey.pem)
+            cp "$cert_dir/fullchain.pem" "$SSL_DIR/meet.fullchain.pem"
+            cp "$cert_dir/privkey.pem" "$SSL_DIR/meet.privkey.pem"
+            
+            # Certificados para Jitsi Keys
+            cp "$cert_dir/fullchain.pem" "$JITSI_KEYS_DIR/cert.crt"
+            cp "$cert_dir/privkey.pem" "$JITSI_KEYS_DIR/cert.key"
+            
+            log_success "Certificados copiados de $cert_name"
+            return 0
+        fi
+    fi
+    return 1
+}
+
+# Tentar copiar de diferentes nomes de certificado
+for cert_name in "telecuidar-all" "telecuidar-br" "telecuidar-www" "telecuidar-meet"; do
+    if copy_certs_from_letsencrypt "$cert_name"; then
+        break
+    fi
+done
+
+# Verificar se os certificados foram copiados
+if [ -f "$SSL_DIR/telecuidar.crt" ] && [ -f "$SSL_DIR/telecuidar.key" ]; then
+    log_success "Certificados SSL prontos em $SSL_DIR"
+    ls -la "$SSL_DIR/"
+else
+    log_warning "Certificados SSL não encontrados em $SSL_DIR"
+fi
+
 # Configurar permissões dos certificados
 chmod 644 "$SSL_DIR"/*.pem "$SSL_DIR"/*.crt "$SSL_DIR"/*.key 2>/dev/null || true
 chmod 644 "$JITSI_KEYS_DIR"/*.crt "$JITSI_KEYS_DIR"/*.key 2>/dev/null || true
@@ -443,6 +490,63 @@ log_step "CONFIGURANDO AMBIENTE"
 
 cp "$ENV_PROD_FILE" "$ENV_FILE"
 log_success "Arquivo .env criado a partir de .env.prod"
+
+# ========================================
+# CORRIGIR ENCODING DO .ENV (Windows → Linux)
+# ========================================
+log_info "Corrigindo encoding do arquivo .env (caso venha do Windows)..."
+
+# Usar dos2unix para converter line endings e remover problemas de encoding
+if command -v dos2unix &> /dev/null; then
+    dos2unix "$ENV_FILE" 2>/dev/null
+    log_success "Line endings convertidos com dos2unix"
+else
+    # Fallback: conversão manual
+    # Detectar e converter de UTF-16LE (Windows) para UTF-8 (Linux)
+    if file "$ENV_FILE" | grep -q "UTF-16"; then
+        log_warning "Arquivo .env está em UTF-16 (Windows), convertendo para UTF-8..."
+        iconv -f UTF-16LE -t UTF-8 "$ENV_FILE" > "$ENV_FILE.tmp" && mv "$ENV_FILE.tmp" "$ENV_FILE"
+        log_success "Encoding convertido para UTF-8"
+    fi
+
+    # Remover BOM (Byte Order Mark) se existir
+    if head -c 3 "$ENV_FILE" | grep -q $'\xEF\xBB\xBF'; then
+        log_warning "Removendo BOM do arquivo .env..."
+        sed -i '1s/^\xEF\xBB\xBF//' "$ENV_FILE"
+    fi
+
+    # Converter line endings de Windows (CRLF) para Unix (LF)
+    sed -i 's/\r$//' "$ENV_FILE"
+fi
+
+log_success "Arquivo .env configurado corretamente"
+
+# Converter também outros arquivos importantes
+for config_file in docker-compose.yml docker-compose.*.yml; do
+    if [ -f "$INSTALL_DIR/$config_file" ]; then
+        dos2unix "$INSTALL_DIR/$config_file" 2>/dev/null || sed -i 's/\r$//' "$INSTALL_DIR/$config_file"
+    fi
+done
+
+# ========================================
+# PREPARAR CONFIGURAÇÃO NGINX PARA PRODUÇÃO
+# ========================================
+log_info "Preparando configuração Nginx para produção..."
+
+# Remover arquivos de configuração de desenvolvimento (*.dev.conf)
+# Esses arquivos são usados apenas para desenvolvimento local
+for dev_conf in "$INSTALL_DIR/docker/nginx/conf.d"/*.dev.conf; do
+    if [ -f "$dev_conf" ]; then
+        rm -f "$dev_conf"
+        log_info "Removido: $(basename $dev_conf) (config de desenvolvimento)"
+    fi
+done
+
+# Também remover configs antigas de dev (caso existam)
+rm -f "$INSTALL_DIR/docker/nginx/conf.d/default.conf" 2>/dev/null
+rm -f "$INSTALL_DIR/docker/nginx/conf.d/jitsi-dev.conf" 2>/dev/null
+
+log_success "Configuração Nginx preparada para produção"
 
 # ========================================
 # CRIAR SCRIPT DE BACKUP
