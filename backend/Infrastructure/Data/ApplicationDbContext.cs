@@ -23,6 +23,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<ScheduleBlock> ScheduleBlocks { get; set; }
     public DbSet<Prescription> Prescriptions { get; set; }
     public DbSet<SavedCertificate> SavedCertificates { get; set; }
+    public DbSet<MedicalCertificate> MedicalCertificates { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -225,6 +226,36 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.CertificateSubject).HasMaxLength(500);
             entity.Property(e => e.DocumentHash).HasMaxLength(100);
             entity.HasIndex(e => e.DocumentHash);
+
+            entity.HasOne(e => e.Appointment)
+                .WithMany()
+                .HasForeignKey(e => e.AppointmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Professional)
+                .WithMany()
+                .HasForeignKey(e => e.ProfessionalId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Patient)
+                .WithMany()
+                .HasForeignKey(e => e.PatientId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // MedicalCertificate Configuration
+        modelBuilder.Entity<MedicalCertificate>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Tipo).IsRequired();
+            entity.Property(e => e.Conteudo).IsRequired();
+            entity.Property(e => e.Cid).HasMaxLength(20);
+            entity.Property(e => e.DigitalSignature).HasMaxLength(10000);
+            entity.Property(e => e.CertificateThumbprint).HasMaxLength(100);
+            entity.Property(e => e.CertificateSubject).HasMaxLength(500);
+            entity.Property(e => e.DocumentHash).HasMaxLength(100);
+            entity.HasIndex(e => e.DocumentHash);
+            entity.HasIndex(e => e.AppointmentId);
 
             entity.HasOne(e => e.Appointment)
                 .WithMany()
