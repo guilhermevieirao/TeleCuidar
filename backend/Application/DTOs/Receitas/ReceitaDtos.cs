@@ -53,6 +53,17 @@ public class AddPrescriptionItemDto
     public string? Observacoes { get; set; }
 }
 
+public class UpdatePrescriptionItemDto
+{
+    public string Medicamento { get; set; } = string.Empty;
+    public string? CodigoAnvisa { get; set; }
+    public string Dosagem { get; set; } = string.Empty;
+    public string Frequencia { get; set; } = string.Empty;
+    public string Periodo { get; set; } = string.Empty;
+    public string Posologia { get; set; } = string.Empty;
+    public string? Observacoes { get; set; }
+}
+
 public class SignPrescriptionDto
 {
     public string CertificateThumbprint { get; set; } = string.Empty;

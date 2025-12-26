@@ -43,13 +43,10 @@ public class PrescriptionsController : ControllerBase
     }
 
     [HttpGet("appointment/{appointmentId}")]
-    public async Task<ActionResult<PrescriptionDto>> GetPrescriptionByAppointment(Guid appointmentId)
+    public async Task<ActionResult<List<PrescriptionDto>>> GetPrescriptionsByAppointment(Guid appointmentId)
     {
-        var prescription = await _prescriptionService.GetPrescriptionByAppointmentIdAsync(appointmentId);
-        if (prescription == null)
-            return NotFound();
-
-        return Ok(prescription);
+        var prescriptions = await _prescriptionService.GetPrescriptionsByAppointmentIdAsync(appointmentId);
+        return Ok(prescriptions);
     }
 
     [HttpGet("patient/{patientId}")]
@@ -149,6 +146,23 @@ public class PrescriptionsController : ControllerBase
         try
         {
             var prescription = await _prescriptionService.RemoveItemAsync(id, itemId);
+            if (prescription == null)
+                return NotFound();
+
+            return Ok(prescription);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPut("{id}/items/{itemId}")]
+    public async Task<ActionResult<PrescriptionDto>> UpdateItem(Guid id, string itemId, [FromBody] UpdatePrescriptionItemDto dto)
+    {
+        try
+        {
+            var prescription = await _prescriptionService.UpdateItemAsync(id, itemId, dto);
             if (prescription == null)
                 return NotFound();
 

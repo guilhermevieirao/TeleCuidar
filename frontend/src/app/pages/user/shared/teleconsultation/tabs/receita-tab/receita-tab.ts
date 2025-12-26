@@ -1,24 +1,25 @@
-import { Component, Input, OnInit, OnDestroy, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 import { ButtonComponent } from '@shared/components/atoms/button/button';
 import { IconComponent } from '@shared/components/atoms/icon/icon';
+import { DigitalSignatureComponent, DigitalSignatureResult } from '@shared/components/molecules/digital-signature/digital-signature';
+import { ModalService } from '@core/services/modal.service';
 import { 
   PrescriptionService, 
   Prescription, 
-  PrescriptionItem, 
+  CreatePrescriptionDto,
   AddPrescriptionItemDto,
-  MedicamentoAnvisa
+  UpdatePrescriptionItemDto,
+  MedicamentoAnvisa,
+  PrescriptionItem
 } from '@core/services/prescription.service';
-import { CertificateService, SavedCertificate, PfxCertificateInfo } from '@core/services/certificate.service';
-import { ModalService } from '@core/services/modal.service';
-import { TeleconsultationRealTimeService, PrescriptionUpdatedEvent } from '@core/services/teleconsultation-realtime.service';
 
 @Component({
   selector: 'app-receita-tab',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, ButtonComponent, IconComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, ButtonComponent, IconComponent, DigitalSignatureComponent],
   templateUrl: './receita-tab.html',
   styleUrls: ['./receita-tab.scss']
 })
@@ -27,15 +28,18 @@ export class ReceitaTabComponent implements OnInit, OnDestroy {
   @Input() userrole: 'PATIENT' | 'PROFESSIONAL' | 'ADMIN' = 'PATIENT';
   @Input() readonly = false;
   
-  @ViewChild('pfxFileInput') pfxFileInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('digitalSignature') digitalSignature!: DigitalSignatureComponent;
 
-  prescription: Prescription | null = null;
+  prescriptions: Prescription[] = [];
   isLoading = true;
   isSaving = false;
   isGeneratingPdf = false;
-  showItemForm = false;
   
-  // Form para novo item
+  // Estado do formulário de itens
+  showItemForm = false;
+  currentPrescriptionId: string | null = null;
+  
+  // Form para adicionar item
   itemForm: FormGroup;
   
   // Busca de medicamentos
@@ -44,39 +48,26 @@ export class ReceitaTabComponent implements OnInit, OnDestroy {
   showMedicamentoDropdown = false;
   isSearching = false;
   
-  // Certificados salvos na plataforma
-  savedCertificates: SavedCertificate[] = [];
-  selectedSavedCert: SavedCertificate | null = null;
-  showSavedCertsModal = false;
-  isLoadingSavedCerts = false;
-  showSignatureOptionsModal = false;
-  
-  // Salvar novo certificado
-  showSaveCertModal = false;
-  saveCertName = '';
-  saveCertRequirePassword = true;
-  saveCertInfo: PfxCertificateInfo | null = null;
-  isValidatingPfx = false;
-  
-  // Assinatura
+  // Assinatura digital
   isSigning = false;
-  certPasswordForSign = '';
-  showCertPasswordModal = false;
-  
-  // PFX file upload
-  pfxFile: File | null = null;
-  pfxPassword = '';
-  showPfxPasswordModal = false;
+  signingPrescriptionId: string | null = null;
+
+  // Toast de sucesso
+  showSuccessToast = false;
+  successToastMessage = '';
+  private toastTimeout: any;
+
+  // Modo de edição
+  isEditMode = false;
+  editingItemId: string | null = null;
 
   private destroy$ = new Subject<void>();
   private searchSubject = new Subject<string>();
 
   constructor(
     private fb: FormBuilder,
-    private prescriptionService: PrescriptionService,
-    private certificateService: CertificateService,
     private modalService: ModalService,
-    private teleconsultationRealTime: TeleconsultationRealTimeService,
+    private prescriptionService: PrescriptionService,
     private cdr: ChangeDetectorRef
   ) {
     this.itemForm = this.fb.group({
@@ -92,16 +83,10 @@ export class ReceitaTabComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     if (this.appointmentId) {
-      this.loadPrescription();
+      this.loadPrescriptions();
     }
-
-    // Carregar certificados salvos do usuário
-    this.loadSavedCertificates();
     
-    // Setup real-time subscriptions
-    this.setupRealTimeSubscriptions();
-
-    // Setup debounced search
+    // Setup debounced search for medicamentos
     this.searchSubject.pipe(
       debounceTime(300),
       distinctUntilChanged(),
@@ -116,92 +101,239 @@ export class ReceitaTabComponent implements OnInit, OnDestroy {
     });
   }
 
-  private setupRealTimeSubscriptions(): void {
-    // Listen for prescription updates from other participant
-    this.teleconsultationRealTime.prescriptionUpdated$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((event: PrescriptionUpdatedEvent) => {
-        if (event.prescription && this.appointmentId) {
-          // Reload prescription data
-          this.loadPrescription();
-        }
-      });
-  }
-
-  loadSavedCertificates() {
-    this.certificateService.loadSavedCertificates().subscribe();
-    this.certificateService.getSavedCertificates().pipe(
-      takeUntil(this.destroy$)
-    ).subscribe(certs => {
-      this.savedCertificates = certs;
-    });
-  }
-
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+    }
   }
 
-  loadPrescription() {
+  // === Toast de sucesso ===
+  
+  showToast(message: string) {
+    this.successToastMessage = message;
+    this.showSuccessToast = true;
+    
+    // Limpar timeout anterior se existir
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+    }
+    
+    // Auto-hide após 4 segundos
+    this.toastTimeout = setTimeout(() => {
+      this.hideToast();
+    }, 4000);
+    
+    this.cdr.detectChanges();
+  }
+
+  hideToast() {
+    this.showSuccessToast = false;
+    this.successToastMessage = '';
+    this.cdr.detectChanges();
+  }
+
+  loadPrescriptions() {
     if (!this.appointmentId) return;
 
     this.isLoading = true;
-    this.prescriptionService.getPrescriptionByAppointment(this.appointmentId).subscribe({
-      next: (prescription) => {
-        this.prescription = prescription;
+    this.prescriptionService.getPrescriptionsByAppointment(this.appointmentId).subscribe({
+      next: (prescriptions) => {
+        this.prescriptions = prescriptions;
         this.isLoading = false;
         this.cdr.detectChanges();
       },
-      error: (error) => {
-        // 404 é esperado quando não existe receita ainda
-        if (error.status === 404) {
-          this.prescription = null;
-        } else {
-          console.error('Erro ao carregar receita:', error);
-        }
+      error: (err) => {
+        console.error('Erro ao carregar receitas:', err);
+        this.prescriptions = [];
         this.isLoading = false;
         this.cdr.detectChanges();
       }
     });
   }
 
-  createPrescription() {
-    if (!this.appointmentId) return;
+  get isProfessional(): boolean {
+    return this.userrole === 'PROFESSIONAL' || this.userrole === 'ADMIN';
+  }
 
+  get canEdit(): boolean {
+    return this.isProfessional && !this.readonly;
+  }
+
+  // === Criação de nova receita ===
+  
+  startNewPrescription() {
+    if (!this.appointmentId) return;
+    
     this.isSaving = true;
-    this.prescriptionService.createPrescription({ appointmentId: this.appointmentId }).subscribe({
+    const dto: CreatePrescriptionDto = {
+      appointmentId: this.appointmentId,
+      items: []
+    };
+    
+    this.prescriptionService.createPrescription(dto).subscribe({
       next: (prescription) => {
-        this.prescription = prescription;
         this.isSaving = false;
+        this.loadPrescriptions();
+        // Abrir form de adicionar item para a nova receita
+        this.currentPrescriptionId = prescription.id;
         this.showItemForm = true;
         this.cdr.detectChanges();
-        
-        // Notify other participant via SignalR
-        this.teleconsultationRealTime.notifyPrescriptionUpdated(this.appointmentId!, prescription);
       },
-      error: (error) => {
+      error: (err) => {
+        console.error('Erro ao criar receita:', err);
         this.isSaving = false;
         this.cdr.detectChanges();
-        this.modalService.alert({
-          title: 'Erro',
-          message: error.error?.message || 'Erro ao criar receita.',
-          variant: 'danger'
-        }).subscribe();
+        this.modalService.alert({ 
+          title: 'Erro', 
+          message: err.error?.message || 'Não foi possível criar a receita.', 
+          variant: 'danger' 
+        });
       }
     });
   }
+
+  // === Gerenciamento de itens (medicamentos) ===
+  
+  openAddItemForm(prescriptionId: string) {
+    this.currentPrescriptionId = prescriptionId;
+    this.itemForm.reset();
+    this.medicamentoSearch = '';
+    this.showItemForm = true;
+    this.isEditMode = false;
+    this.editingItemId = null;
+  }
+
+  openEditItemForm(prescription: Prescription, item: PrescriptionItem) {
+    if (prescription.isSigned) return;
+    
+    this.currentPrescriptionId = prescription.id;
+    this.editingItemId = item.id;
+    this.isEditMode = true;
+    this.showItemForm = true;
+    
+    // Preencher o formulário com os dados do item
+    this.itemForm.patchValue({
+      medicamento: item.medicamento,
+      codigoAnvisa: item.codigoAnvisa || '',
+      dosagem: item.dosagem,
+      frequencia: item.frequencia,
+      periodo: item.periodo,
+      posologia: item.posologia,
+      observacoes: item.observacoes || ''
+    });
+    this.medicamentoSearch = item.medicamento;
+  }
+
+  cancelItemForm() {
+    this.showItemForm = false;
+    this.currentPrescriptionId = null;
+    this.isEditMode = false;
+    this.editingItemId = null;
+    this.itemForm.reset();
+    this.medicamentoSearch = '';
+    this.medicamentoResults = [];
+    this.showMedicamentoDropdown = false;
+  }
+
+  addItem() {
+    if (this.itemForm.invalid || !this.currentPrescriptionId) return;
+
+    this.isSaving = true;
+    const formData = this.itemForm.value;
+
+    // Se está em modo de edição, atualizar o item existente
+    if (this.isEditMode && this.editingItemId) {
+      const updateDto: UpdatePrescriptionItemDto = formData;
+      
+      this.prescriptionService.updateItem(this.currentPrescriptionId, this.editingItemId, updateDto).subscribe({
+        next: () => {
+          this.isSaving = false;
+          this.itemForm.reset();
+          this.medicamentoSearch = '';
+          this.isEditMode = false;
+          this.editingItemId = null;
+          this.showItemForm = false;
+          this.loadPrescriptions();
+          this.showToast('Medicamento atualizado com sucesso!');
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Erro ao atualizar item:', err);
+          this.isSaving = false;
+          this.cdr.detectChanges();
+          this.modalService.alert({ 
+            title: 'Erro', 
+            message: err.error?.message || 'Não foi possível atualizar o medicamento.', 
+            variant: 'danger' 
+          });
+        }
+      });
+    } else {
+      // Adicionar novo item
+      const item: AddPrescriptionItemDto = formData;
+
+      this.prescriptionService.addItem(this.currentPrescriptionId, item).subscribe({
+        next: () => {
+          this.isSaving = false;
+          this.itemForm.reset();
+          this.medicamentoSearch = '';
+          this.loadPrescriptions();
+          this.showToast('Medicamento adicionado! Você pode adicionar mais ou fechar o formulário.');
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Erro ao adicionar item:', err);
+          this.isSaving = false;
+          this.cdr.detectChanges();
+          this.modalService.alert({ 
+            title: 'Erro', 
+            message: err.error?.message || 'Não foi possível adicionar o medicamento.', 
+            variant: 'danger' 
+          });
+        }
+      });
+    }
+  }
+
+  removeItem(prescriptionId: string, itemId: string) {
+    this.modalService.confirm({
+      title: 'Remover Medicamento',
+      message: 'Tem certeza que deseja remover este medicamento?',
+      confirmText: 'Sim, remover',
+      cancelText: 'Cancelar',
+      variant: 'danger'
+    }).subscribe(result => {
+      if (result.confirmed) {
+        this.prescriptionService.removeItem(prescriptionId, itemId).subscribe({
+          next: () => {
+            this.loadPrescriptions();
+          },
+          error: (err) => {
+            console.error('Erro ao remover item:', err);
+            this.modalService.alert({ 
+              title: 'Erro', 
+              message: err.error?.message || 'Não foi possível remover o medicamento.', 
+              variant: 'danger' 
+            });
+          }
+        });
+      }
+    });
+  }
+
+  // === Busca de medicamentos ANVISA ===
 
   onMedicamentoInput(event: Event) {
     const input = event.target as HTMLInputElement;
     this.medicamentoSearch = input.value;
     
-    // Atualizar o formControl diretamente para liberar o botão
     this.itemForm.patchValue({
       medicamento: input.value,
-      codigoAnvisa: '' // Limpar código ANVISA quando digita manualmente
+      codigoAnvisa: ''
     });
     
-    // Mostrar spinner imediatamente se tiver pelo menos 2 caracteres
     if (input.value.length >= 2) {
       this.isSearching = true;
     } else {
@@ -250,109 +382,42 @@ export class ReceitaTabComponent implements OnInit, OnDestroy {
     }, 200);
   }
 
-  addItem() {
-    if (this.itemForm.invalid || !this.prescription) return;
+  // === Exclusão de receita ===
 
-    const item: AddPrescriptionItemDto = this.itemForm.value;
-    
-    this.isSaving = true;
-    this.prescriptionService.addItem(this.prescription.id, item).subscribe({
-      next: (prescription) => {
-        this.prescription = prescription;
-        this.itemForm.reset();
-        this.medicamentoSearch = '';
-        this.isSaving = false;
-        this.showItemForm = false;
-        this.cdr.detectChanges();
-        
-        // Notify other participant via SignalR
-        if (this.appointmentId) {
-          this.teleconsultationRealTime.notifyPrescriptionUpdated(this.appointmentId, prescription);
-        }
-      },
-      error: (error) => {
-        this.isSaving = false;
-        this.cdr.detectChanges();
-        this.modalService.alert({
-          title: 'Erro',
-          message: error.error?.message || 'Erro ao adicionar medicamento.',
-          variant: 'danger'
-        }).subscribe();
-      }
-    });
-  }
-
-  removeItem(itemId: string) {
-    if (!this.prescription) return;
-
-    this.modalService.confirm({
-      title: 'Remover Medicamento',
-      message: 'Tem certeza que deseja remover este medicamento da receita?',
-      variant: 'warning',
-      confirmText: 'Sim, remover',
-      cancelText: 'Cancelar'
-    }).subscribe(result => {
-      if (result.confirmed && this.prescription) {
-        this.prescriptionService.removeItem(this.prescription.id, itemId).subscribe({
-          next: (prescription) => {
-            this.prescription = prescription;
-            this.cdr.detectChanges();
-            
-            // Notify other participant via SignalR
-            if (this.appointmentId) {
-              this.teleconsultationRealTime.notifyPrescriptionUpdated(this.appointmentId, prescription);
-            }
-          },
-          error: (error) => {
-            this.cdr.detectChanges();
-            this.modalService.alert({
-              title: 'Erro',
-              message: error.error?.message || 'Erro ao remover medicamento.',
-              variant: 'danger'
-            }).subscribe();
-          }
-        });
-      }
-    });
-  }
-
-  cancelItemForm() {
-    this.showItemForm = false;
-    this.itemForm.reset();
-    this.medicamentoSearch = '';
-  }
-
-  deletePrescription() {
-    if (!this.prescription) return;
+  deletePrescription(prescription: Prescription) {
+    if (prescription.isSigned) {
+      this.modalService.alert({ 
+        title: 'Erro', 
+        message: 'Não é possível excluir uma receita já assinada.', 
+        variant: 'danger' 
+      });
+      return;
+    }
 
     this.modalService.confirm({
       title: 'Excluir Receita',
       message: 'Tem certeza que deseja excluir esta receita? Esta ação não pode ser desfeita.',
-      variant: 'danger',
       confirmText: 'Sim, excluir',
-      cancelText: 'Cancelar'
+      cancelText: 'Cancelar',
+      variant: 'danger'
     }).subscribe(result => {
-      if (result.confirmed && this.prescription) {
-        this.isSaving = true;
-        this.prescriptionService.deletePrescription(this.prescription.id).subscribe({
+      if (result.confirmed) {
+        this.prescriptionService.deletePrescription(prescription.id).subscribe({
           next: () => {
-            this.prescription = null;
-            this.isSaving = false;
-            this.cdr.detectChanges();
-            this.modalService.alert({
-              title: 'Sucesso',
-              message: 'Receita excluída com sucesso.',
-              variant: 'success'
-            }).subscribe();
+            this.loadPrescriptions();
+            this.modalService.alert({ 
+              title: 'Sucesso', 
+              message: 'Receita excluída com sucesso.', 
+              variant: 'success' 
+            });
           },
-          error: (error) => {
-            this.isSaving = false;
-            this.cdr.detectChanges();
-            this.modalService.alert({
-              title: 'Erro',
-              message: error.error?.message || 'Erro ao excluir receita.',
-              variant: 'danger'
-            }).subscribe();
+          error: (err) => {
+            console.error('Erro ao excluir receita:', err);
+            this.modalService.alert({ 
+              title: 'Erro', 
+              message: err.error?.message || 'Não foi possível excluir a receita.', 
+              variant: 'danger' 
+            });
           }
         });
       }
@@ -361,402 +426,121 @@ export class ReceitaTabComponent implements OnInit, OnDestroy {
 
   // === Geração de PDF ===
 
-  generatePdf() {
-    if (!this.prescription) return;
-
+  generatePdf(prescription: Prescription) {
     this.isGeneratingPdf = true;
-    this.prescriptionService.generatePdf(this.prescription.id).subscribe({
-      next: (pdf) => {
+    
+    this.prescriptionService.generatePdf(prescription.id).subscribe({
+      next: (response) => {
+        // Converter base64 para blob
+        const byteCharacters = atob(response.pdfBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = response.fileName || `receita_${new Date().toISOString().split('T')[0]}.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
         this.isGeneratingPdf = false;
-        this.downloadPdf(pdf.pdfBase64, pdf.fileName);
+        this.cdr.detectChanges();
       },
-      error: (error) => {
+      error: (err) => {
+        console.error('Erro ao gerar PDF:', err);
         this.isGeneratingPdf = false;
-        this.modalService.alert({
-          title: 'Erro',
-          message: error.error?.message || 'Erro ao gerar PDF.',
-          variant: 'danger'
-        }).subscribe();
+        this.cdr.detectChanges();
+        this.modalService.alert({ 
+          title: 'Erro', 
+          message: err.error?.message || 'Não foi possível gerar o PDF.', 
+          variant: 'danger' 
+        });
       }
     });
   }
 
-  // === Assinatura com Certificados Salvos ===
+  // === Assinatura Digital ===
 
-  // Abrir modal para selecionar certificado ou arquivo PFX
-  openSignatureOptions() {
-    if (!this.prescription) return;
-
-    if (this.savedCertificates.length > 0) {
-      // Tem certificados salvos - mostrar lista
-      this.selectedSavedCert = null;
-      this.showSavedCertsModal = true;
-    } else {
-      // Sem certificados salvos - mostrar opções
-      this.showSignatureOptionsModal = true;
-    }
+  openSignatureOptions(prescription: Prescription) {
+    this.signingPrescriptionId = prescription.id;
+    this.digitalSignature.open();
   }
 
-  // Fechar modal de opções de assinatura
-  closeSignatureOptionsModal() {
-    this.showSignatureOptionsModal = false;
-  }
-
-  // Fechar modal de certificados salvos
-  closeSavedCertsModal() {
-    this.showSavedCertsModal = false;
-    this.selectedSavedCert = null;
-  }
-
-  // Selecionar certificado salvo
-  selectSavedCertificate(cert: SavedCertificate) {
-    this.selectedSavedCert = cert;
-  }
-
-  // Confirmar assinatura com certificado salvo
-  confirmSavedCertSignature() {
-    if (!this.prescription || !this.selectedSavedCert) return;
-
-    if (this.selectedSavedCert.requirePasswordOnUse) {
-      // Precisa pedir senha
-      this.certPasswordForSign = '';
-      this.showCertPasswordModal = true;
-      this.showSavedCertsModal = false;
-    } else {
-      // Não precisa de senha, assinar direto
-      this.signWithSavedCert();
-    }
-  }
-
-  // Fechar modal de senha do certificado
-  closeCertPasswordModal() {
-    this.showCertPasswordModal = false;
-    this.certPasswordForSign = '';
-  }
-
-  // Assinar com certificado salvo
-  signWithSavedCert() {
-    if (!this.prescription || !this.selectedSavedCert) return;
-
-    this.isSigning = true;
-    this.showSavedCertsModal = false;
-    this.showCertPasswordModal = false;
-
-    const password = this.selectedSavedCert.requirePasswordOnUse ? this.certPasswordForSign : undefined;
-
-    this.prescriptionService.signWithSavedCert(
-      this.prescription.id, 
-      this.selectedSavedCert.id,
-      password
-    ).subscribe({
-      next: (pdf) => {
-        this.isSigning = false;
-        this.selectedSavedCert = null;
-        this.certPasswordForSign = '';
-        this.cdr.detectChanges();
-        
-        // Download the signed PDF
-        this.downloadPdf(pdf.pdfBase64, pdf.fileName);
-        
-        // Reload prescription to update signed status
-        this.loadPrescription();
-        
-        this.modalService.alert({
-          title: 'Sucesso',
-          message: 'PDF gerado e assinado digitalmente com sucesso!',
-          variant: 'success'
-        }).subscribe();
-      },
-      error: (error) => {
-        this.isSigning = false;
-        this.cdr.detectChanges();
-        this.modalService.alert({
-          title: 'Erro',
-          message: error.error?.message || 'Erro ao gerar PDF assinado.',
-          variant: 'danger'
-        }).subscribe();
-      }
-    });
-  }
-
-  // === Salvar novo certificado ===
-
-  // Usar arquivo PFX e opcionalmente salvar
-  usePfxFile() {
-    this.showSignatureOptionsModal = false;
-    this.openPfxSelector();
-  }
-
-  // Abrir modal para salvar certificado
-  openSaveCertModal() {
-    this.showSignatureOptionsModal = false;
-    this.showSavedCertsModal = false;
-    this.saveCertName = '';
-    this.saveCertRequirePassword = true;
-    this.saveCertInfo = null;
-    this.pfxFile = null;
-    this.pfxPassword = '';
-    this.showSaveCertModal = true;
-  }
-
-  // Fechar modal de salvar certificado
-  closeSaveCertModal() {
-    this.showSaveCertModal = false;
-    this.saveCertInfo = null;
-    this.pfxFile = null;
-    this.pfxPassword = '';
-  }
-
-  // Selecionar arquivo PFX para salvar
-  onSaveCertPfxSelected(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      this.pfxFile = input.files[0];
-      this.saveCertInfo = null;
-    }
-    input.value = '';
-  }
-
-  // Validar PFX antes de salvar
-  async validatePfxForSave() {
-    if (!this.pfxFile || !this.pfxPassword) return;
-
-    this.isValidatingPfx = true;
-
-    try {
-      const pfxBase64 = await this.certificateService.fileToBase64(this.pfxFile);
-      this.certificateService.validatePfx(pfxBase64, this.pfxPassword).subscribe({
-        next: (info) => {
-          this.isValidatingPfx = false;
-          this.saveCertInfo = info;
-          this.cdr.detectChanges();
-          if (!info.isValid) {
-            this.modalService.alert({
-              title: 'Certificado Invalido',
-              message: info.errorMessage || 'O certificado nao e valido.',
-              variant: 'warning'
-            }).subscribe();
-          } else {
-            // Sugerir nome baseado no CN
-            this.saveCertName = this.certificateService.formatSubjectName(info.subjectName);
-          }
-        },
-        error: (error) => {
-          this.isValidatingPfx = false;
-          this.cdr.detectChanges();
-          this.modalService.alert({
-            title: 'Erro',
-            message: error.error?.message || 'Erro ao validar certificado.',
-            variant: 'danger'
-          }).subscribe();
-        }
-      });
-    } catch {
-      this.isValidatingPfx = false;
-      this.cdr.detectChanges();
-      this.modalService.alert({
-        title: 'Erro',
-        message: 'Erro ao ler arquivo do certificado.',
-        variant: 'danger'
-      }).subscribe();
-    }
-  }
-
-  // Salvar certificado na plataforma
-  async saveCertificate() {
-    if (!this.pfxFile || !this.pfxPassword || !this.saveCertInfo?.isValid) return;
-
-    this.isSigning = true;
-
-    try {
-      const pfxBase64 = await this.certificateService.fileToBase64(this.pfxFile);
-      
-      this.certificateService.saveCertificate({
-        name: this.saveCertName || this.certificateService.formatSubjectName(this.saveCertInfo.subjectName),
-        pfxBase64,
-        password: this.pfxPassword,
-        requirePasswordOnUse: this.saveCertRequirePassword
-      }).subscribe({
-        next: () => {
-          this.isSigning = false;
-          this.cdr.detectChanges();
-          this.closeSaveCertModal();
-          this.modalService.alert({
-            title: 'Sucesso',
-            message: 'Certificado salvo com sucesso! Voce pode usa-lo para assinar receitas.',
-            variant: 'success'
-          }).subscribe();
-        },
-        error: (error) => {
-          this.isSigning = false;
-          this.cdr.detectChanges();
-          this.modalService.alert({
-            title: 'Erro',
-            message: error.error?.message || 'Erro ao salvar certificado.',
-            variant: 'danger'
-          }).subscribe();
-        }
-      });
-    } catch {
-      this.isSigning = false;
-      this.cdr.detectChanges();
-      this.modalService.alert({
-        title: 'Erro',
-        message: 'Erro ao processar certificado.',
-        variant: 'danger'
-      }).subscribe();
-    }
-  }
-
-  // Usar arquivo PFX direto (sem salvar)
-  useFileCertificate() {
-    this.closeSavedCertsModal();
-    this.openPfxSelector();
-  }
-
-  // Trigger file input for PFX selection (fallback)
-  openPfxSelector() {
-    if (this.pfxFileInput) {
-      this.pfxFileInput.nativeElement.click();
-    }
-  }
-
-  // Handle PFX file selection
-  onPfxFileSelected(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      this.pfxFile = input.files[0];
-      this.pfxPassword = '';
-      this.showPfxPasswordModal = true;
-    }
-    // Reset input to allow selecting the same file again
-    input.value = '';
-  }
-
-  // Close PFX password modal
-  closePfxPasswordModal() {
-    this.showPfxPasswordModal = false;
-    this.pfxFile = null;
-    this.pfxPassword = '';
-  }
-
-  // Generate signed PDF with PFX certificate
-  generateSignedPdf() {
-    if (!this.prescription || !this.pfxFile || !this.pfxPassword) {
-      this.modalService.alert({
-        title: 'Erro',
-        message: 'Selecione um certificado PFX e informe a senha.',
-        variant: 'warning'
-      }).subscribe();
+  onSign(result: DigitalSignatureResult) {
+    console.log('onSign chamado com resultado:', result);
+    
+    if (!this.signingPrescriptionId) {
+      console.error('signingPrescriptionId é null!');
       return;
     }
 
     this.isSigning = true;
-    this.showPfxPasswordModal = false;
 
-    // Read the PFX file as base64
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = (reader.result as string).split(',')[1]; // Remove data:... prefix
-      
-      this.prescriptionService.generateSignedPdf(this.prescription!.id, base64, this.pfxPassword).subscribe({
-        next: (pdf) => {
-          this.isSigning = false;
-          this.pfxFile = null;
-          this.pfxPassword = '';
-          this.cdr.detectChanges();
-          
-          // Download the signed PDF
-          this.downloadPdf(pdf.pdfBase64, pdf.fileName);
-          
-          // Reload prescription to update signed status
-          this.loadPrescription();
-          
-          this.modalService.alert({
-            title: 'Sucesso',
-            message: 'PDF gerado e assinado digitalmente com sucesso!',
-            variant: 'success'
-          }).subscribe();
-        },
-        error: (error) => {
-          this.isSigning = false;
-          this.cdr.detectChanges();
-          this.modalService.alert({
-            title: 'Erro',
-            message: error.error?.message || 'Erro ao assinar PDF. Verifique a senha do certificado.',
-            variant: 'danger'
-          }).subscribe();
-        }
+    if (result.type === 'saved-cert') {
+      this.prescriptionService.signWithSavedCert(
+        this.signingPrescriptionId, 
+        result.certificateId!.toString(),
+        result.password
+      ).subscribe({
+        next: () => this.handleSignatureSuccess(),
+        error: (err) => this.handleSignatureError(err)
       });
-    };
-    
-    reader.onerror = () => {
-      this.isSigning = false;
-      this.cdr.detectChanges();
-      this.modalService.alert({
-        title: 'Erro',
-        message: 'Erro ao ler o arquivo do certificado.',
-        variant: 'danger'
-      }).subscribe();
-    };
-    
-    reader.readAsDataURL(this.pfxFile);
+    } else {
+      this.prescriptionService.generateSignedPdf(
+        this.signingPrescriptionId,
+        result.pfxBase64!,
+        result.password!
+      ).subscribe({
+        next: () => this.handleSignatureSuccess(),
+        error: (err) => this.handleSignatureError(err)
+      });
+    }
   }
 
-  private downloadPdf(base64: string, fileName: string) {
-    // Verificar se é HTML (para visualização) ou PDF real
-    const isHtml = base64.startsWith('PCFET0NUWVBF') || !base64.startsWith('JVBERi');
-    
-    if (isHtml) {
-      // Converter Base64 HTML para Blob e abrir em nova janela
-      const htmlContent = atob(base64);
-      const blob = new Blob([htmlContent], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
-    } else {
-      // PDF real - fazer download
-      const byteCharacters = atob(base64);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: 'application/pdf' });
-      
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = fileName;
-      link.click();
-    }
+  private handleSignatureSuccess() {
+    this.isSigning = false;
+    this.signingPrescriptionId = null;
+    this.loadPrescriptions();
+    this.cdr.detectChanges();
+    this.modalService.alert({ 
+      title: 'Sucesso', 
+      message: 'Receita assinada com sucesso!', 
+      variant: 'success' 
+    });
+  }
+
+  private handleSignatureError(err: any) {
+    console.error('Erro ao assinar receita:', err);
+    this.isSigning = false;
+    this.cdr.detectChanges();
+    this.modalService.alert({ 
+      title: 'Erro', 
+      message: err.error?.message || 'Não foi possível assinar a receita.', 
+      variant: 'danger' 
+    });
+  }
+
+  onSignatureCancel() {
+    this.isSigning = false;
+    this.signingPrescriptionId = null;
+  }
+
+  onCertificateSaved() {
+    // Não faz nada - deixa o modal aberto para o auto-apply do certificado
   }
 
   // === Helpers ===
 
-  get canEdit(): boolean {
-    return this.userrole === 'PROFESSIONAL' && !this.prescription?.isSigned && !this.readonly;
+  formatDate(dateStr: string): string {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('pt-BR');
   }
 
-  get canDelete(): boolean {
-    return this.userrole === 'PROFESSIONAL' && !this.readonly;
-  }
-
-  get isProfessional(): boolean {
-    return this.userrole === 'PROFESSIONAL' && !this.readonly;
-  }
-
-  get canSign(): boolean {
-    return this.userrole === 'PROFESSIONAL' && 
-           !this.readonly &&
-           this.prescription !== null && 
-           this.prescription.items.length > 0 && 
-           !this.prescription.isSigned;
-  }
-
-  get hasItems(): boolean {
-    return (this.prescription?.items?.length ?? 0) > 0;
-  }
-
-  get isSigned(): boolean {
-    return this.prescription?.isSigned ?? false;
+  hasItems(prescription: Prescription): boolean {
+    return prescription.items && prescription.items.length > 0;
   }
 }
