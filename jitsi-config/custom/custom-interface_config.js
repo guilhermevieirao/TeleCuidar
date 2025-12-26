@@ -68,6 +68,9 @@ interfaceConfig = {
         'mute-video-everyone'
     ],
     
+    // Botões sempre disponíveis no mobile (incluindo compartilhamento de tela)
+    TOOLBAR_ALWAYS_VISIBLE: ['microphone', 'camera', 'desktop', 'hangup'],
+    
     // ========================================
     // CONFIGURAÇÕES
     // ========================================

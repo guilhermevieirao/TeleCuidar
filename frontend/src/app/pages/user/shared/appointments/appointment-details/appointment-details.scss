@@ -4,6 +4,22 @@
   height: 100%;
   background: var(--background);
   
+  // Modo de visualização - bloqueia interações
+  &.details-view {
+    .appointment-details__tab-content {
+      position: relative;
+      
+      // Desabilita interações com elementos interativos
+      input,
+      textarea,
+      select,
+      button:not(.tabs-nav__item) {
+        pointer-events: none;
+        opacity: 0.7;
+      }
+    }
+  }
+  
   &__header {
     padding: 1.5rem 2rem;
     border-bottom: 1px solid var(--border);

@@ -129,8 +129,10 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddMemoryCache();
 
 // CORS Configuration
+// Em desenvolvimento, aceita qualquer origem na rede local
+var isDevelopment = builder.Environment.IsDevelopment();
 var corsOrigins = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS")
-    ?? "http://localhost:4200,http://192.168.15.2:4200";
+    ?? (isDevelopment ? "*" : "http://localhost:4200");
 var allowAnyOrigin = corsOrigins.Trim() == "*";
 var allowedOrigins = corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries)
     .Select(o => o.Trim())

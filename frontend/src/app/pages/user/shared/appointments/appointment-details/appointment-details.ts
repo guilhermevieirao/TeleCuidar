@@ -19,11 +19,39 @@ import { SpecialtyFieldsTabComponent } from '@pages/user/shared/teleconsultation
 import { IotTabComponent } from '@pages/user/shared/teleconsultation/tabs/iot-tab/iot-tab';
 import { AITabComponent } from '@pages/user/shared/teleconsultation/tabs/ai-tab/ai-tab';
 import { ReceitaTabComponent } from '@pages/user/shared/teleconsultation/tabs/receita-tab/receita-tab';
+import { AtestadoTabComponent } from '@pages/user/shared/teleconsultation/tabs/atestado-tab/atestado-tab';
 import { ReferralTabComponent } from '@pages/user/shared/teleconsultation/tabs/referral-tab/referral-tab';
 import { ReturnTabComponent } from '@pages/user/shared/teleconsultation/tabs/return-tab/return-tab';
 import { getAllDetailsTabs, TabConfig } from '@pages/user/shared/teleconsultation/tabs/tab-config';
 import { Subject, takeUntil } from 'rxjs';
 
+/**
+ * Componente de Detalhes da Consulta
+ * 
+ * Esta é uma tela de VISUALIZAÇÃO APENAS (read-only).
+ * 
+ * PADRÃO DE BLOQUEIO AUTOMÁTICO:
+ * ===============================
+ * 
+ * 1. Propriedade `isDetailsView = true`:
+ *    - Sinaliza que estamos em modo de visualização
+ *    - Automaticamente passada para todas as tabs
+ *    - Tabs devem respeitar essa propriedade para bloquear interações
+ * 
+ * 2. CSS Global (.details-view):
+ *    - Desabilita visualmente todos os inputs, textareas, selects e botões
+ *    - Aplica opacity reduzida para indicar modo read-only
+ *    - Mantém navegação entre tabs funcional
+ * 
+ * 3. Adição de Novas Tabs:
+ *    - Novas tabs são automaticamente incluídas via tab-config.ts
+ *    - Basta configurar `showInDetails: true` no TELECONSULTATION_TABS
+ *    - O bloqueio de interações é aplicado automaticamente via CSS
+ * 
+ * 4. Exceções:
+ *    - Navegação entre tabs permanece ativa (tabs-nav__item)
+ *    - Botões de voltar e outras ações da página principal funcionam normalmente
+ */
 @Component({
   selector: 'app-appointment-details',
   standalone: true,
@@ -44,6 +72,7 @@ import { Subject, takeUntil } from 'rxjs';
     IotTabComponent,
     AITabComponent,
     ReceitaTabComponent,
+    AtestadoTabComponent,
     ReferralTabComponent,
     ReturnTabComponent
   ],
@@ -55,6 +84,9 @@ export class AppointmentDetailsComponent implements OnInit, OnDestroy {
   appointmentId: string | null = null;
   loading = false;
   userrole: 'PATIENT' | 'PROFESSIONAL' | 'ADMIN' = 'PATIENT';
+  
+  // Modo de visualização - todas as interações são bloqueadas
+  readonly isDetailsView = true;
   
   // Tabs - usando configuração centralizada
   activeTab = 'basic';
@@ -180,8 +212,8 @@ export class AppointmentDetailsComponent implements OnInit, OnDestroy {
   }
 
   get visibleTabs(): TabConfig[] {
-    // Retornar todas as tabs disponíveis para a página de detalhes
-    return this.availableTabs;
+    // Retornar todas as tabs disponíveis para a página de detalhes, exceto CNS
+    return this.availableTabs.filter(tab => tab.id !== 'cns');
   }
 
   changeTab(tabId: string) {

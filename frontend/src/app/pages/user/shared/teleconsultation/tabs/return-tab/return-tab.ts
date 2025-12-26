@@ -47,6 +47,7 @@ export class ReturnTabComponent implements OnDestroy, OnChanges {
   @Input() appointmentId: string | null = null;
   @Input() appointment: Appointment | null = null;
   @Input() userrole: 'PATIENT' | 'PROFESSIONAL' | 'ADMIN' = 'PROFESSIONAL';
+  @Input() readonly: boolean = false;
 
   // View mode: 'list' to show existing returns, 'scheduling' to create new
   viewMode: 'list' | 'scheduling' = 'list';

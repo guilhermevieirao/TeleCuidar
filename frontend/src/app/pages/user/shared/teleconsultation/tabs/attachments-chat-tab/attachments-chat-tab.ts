@@ -124,7 +124,8 @@ export class AttachmentsChatTabComponent implements OnInit, OnDestroy {
 
   checkPlatform() {
     if (isPlatformBrowser(this.platformId)) {
-      this.isMobile = this.deviceDetector.isMobile();
+      // Tablets também devem usar interface mobile (têm câmera e galeria)
+      this.isMobile = this.deviceDetector.isMobile() || this.deviceDetector.isTablet();
     }
   }
 
@@ -236,6 +237,19 @@ export class AttachmentsChatTabComponent implements OnInit, OnDestroy {
   }
 
   // ====== SEND ATTACHMENTS ======
+  private generateUUID(): string {
+    // Fallback para quando crypto.randomUUID não está disponível
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    // Gera UUID v4 compatível
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
   async sendAttachments() {
     if (!this.appointmentId || this.pendingFiles.length === 0) return;
     
@@ -246,7 +260,7 @@ export class AttachmentsChatTabComponent implements OnInit, OnDestroy {
         const base64 = await this.fileToBase64(pending.file);
         
         const newMessage: AttachmentMessage = {
-          id: crypto.randomUUID(),
+          id: this.generateUUID(),
           senderRole: this.userrole === 'PROFESSIONAL' ? 'PROFESSIONAL' : 'PATIENT',
           senderName: this.userrole === 'PROFESSIONAL' ? 'Profissional' : 'Você',
           timestamp: new Date().toISOString(),

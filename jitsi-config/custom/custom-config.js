@@ -125,6 +125,13 @@ var config = {
     },
     
     // ========================================
+    // COMPARTILHAMENTO DE TELA
+    // ========================================
+    // Habilitar compartilhamento de tela em dispositivos móveis
+    disableScreensharingVirtualBackground: false,
+    enableScreensharingFilmstripParticipant: true,
+    
+    // ========================================
     // BRANDING
     // ========================================
     // Remover todos os brandings do Jitsi

@@ -54,7 +54,9 @@ export type IconName =
   | 'volume-x'
   | 'phone'
   | 'phone-off'
-  | 'panel-right';
+  | 'panel-right'
+  | 'bookmark'
+  | 'star';
 
 export type IconSize = 'sm' | 'md' | 'lg' | 'xl' | number;
 

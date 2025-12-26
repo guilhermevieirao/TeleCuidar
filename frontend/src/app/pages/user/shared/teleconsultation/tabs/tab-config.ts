@@ -15,8 +15,30 @@ export interface TabConfig {
 
 /**
  * Configuração centralizada de todas as tabs disponíveis.
- * Ao adicionar uma nova tab, adicione-a aqui e ela será automaticamente
- * incluída tanto na teleconsulta quanto nos detalhes da consulta.
+ * 
+ * IMPORTANTE - PADRÃO DE CONFIGURAÇÃO:
+ * =====================================
+ * 
+ * 1. ADIÇÃO DE NOVAS TABS:
+ *    - Para adicionar uma nova tab, basta adicioná-la a este array TELECONSULTATION_TABS
+ *    - Configure `showInTeleconsultation: true` se deve aparecer na videochamada
+ *    - Configure `showInDetails: true` se deve aparecer na tela de detalhes
+ *    - A tab será automaticamente incluída em ambas as telas conforme configuração
+ * 
+ * 2. MODO READONLY AUTOMÁTICO:
+ *    - Todas as tabs na tela de detalhes (/consultas/:id/detalhes) são AUTOMATICAMENTE
+ *      configuradas como somente leitura através da propriedade `isDetailsView`
+ *    - NÃO é necessário adicionar readonly manualmente em cada tab
+ *    - O componente pai (AppointmentDetailsComponent) gerencia isso globalmente
+ * 
+ * 3. CNS É A ÚNICA EXCEÇÃO:
+ *    - CNS tem `showInDetails: false` porque é específica do atendimento ao vivo
+ *    - Todas as outras tabs seguem o padrão: aparecem em ambas as telas
+ * 
+ * 4. COMO FUNCIONA:
+ *    - getTeleconsultationTabs(): retorna tabs para teleconsulta (showInTeleconsultation: true)
+ *    - getDetailsTabs(): retorna tabs para detalhes (showInDetails: true)
+ *    - Novas tabs são automaticamente incluídas baseado nessas flags
  */
 export const TELECONSULTATION_TABS: TabConfig[] = [
   {
@@ -34,7 +56,7 @@ export const TELECONSULTATION_TABS: TabConfig[] = [
     icon: 'user',
     roles: ['PROFESSIONAL', 'ADMIN'],
     showInTeleconsultation: true,
-    showInDetails: true,
+    showInDetails: true, // Aparece automaticamente nos detalhes
     order: 1
   },
   {
@@ -43,7 +65,7 @@ export const TELECONSULTATION_TABS: TabConfig[] = [
     icon: 'file',
     roles: ['PROFESSIONAL', 'ADMIN'],
     showInTeleconsultation: true,
-    showInDetails: true,
+    showInDetails: true, // Aparece automaticamente nos detalhes
     order: 2
   },
   {
@@ -52,7 +74,7 @@ export const TELECONSULTATION_TABS: TabConfig[] = [
     icon: 'book',
     roles: ['PROFESSIONAL', 'ADMIN'],
     showInTeleconsultation: true,
-    showInDetails: true,
+    showInDetails: true, // Aparece automaticamente nos detalhes
     order: 3
   },
   {
@@ -61,7 +83,7 @@ export const TELECONSULTATION_TABS: TabConfig[] = [
     icon: 'stethoscope',
     roles: ['PROFESSIONAL', 'ADMIN'],
     showInTeleconsultation: true,
-    showInDetails: true,
+    showInDetails: true, // Aparece automaticamente nos detalhes
     order: 4
   },
   {
@@ -79,7 +101,7 @@ export const TELECONSULTATION_TABS: TabConfig[] = [
     icon: 'heart',
     roles: ['PATIENT', 'PROFESSIONAL', 'ADMIN'],
     showInTeleconsultation: true,
-    showInDetails: true,
+    showInDetails: true, // Aparece automaticamente nos detalhes
     order: 6
   },
   {
@@ -88,7 +110,7 @@ export const TELECONSULTATION_TABS: TabConfig[] = [
     icon: 'camera',
     roles: ['PATIENT', 'PROFESSIONAL', 'ADMIN'],
     showInTeleconsultation: true,
-    showInDetails: true,
+    showInDetails: true, // Aparece automaticamente nos detalhes
     order: 7
   },
   {
@@ -97,7 +119,7 @@ export const TELECONSULTATION_TABS: TabConfig[] = [
     icon: 'book',
     roles: ['PROFESSIONAL', 'ADMIN'],
     showInTeleconsultation: true,
-    showInDetails: true,
+    showInDetails: true, // Aparece automaticamente nos detalhes
     order: 8
   },
   {
@@ -106,7 +128,7 @@ export const TELECONSULTATION_TABS: TabConfig[] = [
     icon: 'file',
     roles: ['PROFESSIONAL', 'ADMIN'],
     showInTeleconsultation: true,
-    showInDetails: true,
+    showInDetails: true, // Aparece automaticamente nos detalhes
     order: 9
   },
   {
@@ -115,7 +137,7 @@ export const TELECONSULTATION_TABS: TabConfig[] = [
     icon: 'file',
     roles: ['PROFESSIONAL', 'ADMIN'],
     showInTeleconsultation: true,
-    showInDetails: true,
+    showInDetails: true, // Aparece automaticamente nos detalhes
     order: 10
   },
   {
@@ -124,7 +146,7 @@ export const TELECONSULTATION_TABS: TabConfig[] = [
     icon: 'activity',
     roles: ['PROFESSIONAL', 'ADMIN'],
     showInTeleconsultation: true,
-    showInDetails: true,
+    showInDetails: true, // Aparece automaticamente nos detalhes
     order: 11
   },
   {
@@ -133,7 +155,7 @@ export const TELECONSULTATION_TABS: TabConfig[] = [
     icon: 'user',
     roles: ['PROFESSIONAL', 'ADMIN'],
     showInTeleconsultation: true,
-    showInDetails: true,
+    showInDetails: false, // CNS NÃO aparece nos detalhes (apenas na teleconsulta)
     order: 12
   },
   {
@@ -142,7 +164,7 @@ export const TELECONSULTATION_TABS: TabConfig[] = [
     icon: 'calendar',
     roles: ['PROFESSIONAL', 'ADMIN'],
     showInTeleconsultation: true,
-    showInDetails: true,
+    showInDetails: true, // Aparece automaticamente nos detalhes
     order: 13
   },
   {
@@ -151,7 +173,7 @@ export const TELECONSULTATION_TABS: TabConfig[] = [
     icon: 'arrow-right',
     roles: ['PROFESSIONAL', 'ADMIN'],
     showInTeleconsultation: true,
-    showInDetails: true,
+    showInDetails: true, // Aparece automaticamente nos detalhes
     order: 14
   },
   {
@@ -160,7 +182,7 @@ export const TELECONSULTATION_TABS: TabConfig[] = [
     icon: 'check',
     roles: ['PROFESSIONAL', 'ADMIN'],
     showInTeleconsultation: true,
-    showInDetails: true,
+    showInDetails: true, // Aparece automaticamente nos detalhes
     order: 15
   }
 ];

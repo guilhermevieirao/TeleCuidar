@@ -1,13 +1,14 @@
 import { Component, Input, forwardRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { IconComponent, IconName } from '../icon/icon';
 
 @Component({
   selector: 'app-checkbox',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IconComponent],
   template: `
-    <label class="checkbox" [class.checkbox--disabled]="disabled">
+    <label class="checkbox" [class.checkbox--disabled]="disabled" [class.checkbox--with-icon]="icon">
       <input
         type="checkbox"
         class="checkbox__input"
@@ -16,7 +17,11 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
         (change)="onChange($event)"
         (blur)="onTouched()"
       />
-      <span class="checkbox__box"></span>
+      <span class="checkbox__box">
+        @if (icon) {
+          <app-icon [name]="icon" [size]="14" class="checkbox__icon" />
+        }
+      </span>
       <span class="checkbox__label" *ngIf="label">{{ label }}</span>
     </label>
   `,
@@ -58,6 +63,9 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
       &__box {
         position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         width: 20px;
         height: 20px;
         border: 2px solid var(--border-color);
@@ -77,6 +85,26 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
           transform: rotate(45deg) scale(0);
           opacity: 0;
           @include transition(all);
+        }
+      }
+
+      &--with-icon {
+        .checkbox__input:checked + .checkbox__box {
+          &::after {
+            display: none;
+          }
+        }
+
+        .checkbox__icon {
+          opacity: 0;
+          transform: scale(0);
+          @include transition(all);
+          color: white;
+        }
+
+        .checkbox__input:checked + .checkbox__box .checkbox__icon {
+          opacity: 1;
+          transform: scale(1);
         }
       }
 
@@ -102,6 +130,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 export class CheckboxComponent implements ControlValueAccessor {
   @Input() label = '';
   @Input() disabled = false;
+  @Input() icon?: IconName;
 
   value = false;
   

@@ -35,7 +35,9 @@ export class DeviceDetectorService {
   }
 
   /**
-   * Detecta se é um dispositivo móvel
+   * Detecta se é um dispositivo móvel (smartphone)
+   * PRIORIZA: Touch real + User Agent mobile
+   * Resolução é critério SECUNDÁRIO
    */
   isMobile(): boolean {
     if (this.cachedIsMobile !== null) {
@@ -47,31 +49,31 @@ export class DeviceDetectorService {
       return false;
     }
 
-    // Combinar múltiplos critérios
     const hasRealTouchSupport = this.hasRealTouchSupport();
     const hasMobileUserAgent = this.hasMobileUserAgent();
     const viewportWidth = window.innerWidth;
-    const hasOrientationSupport = this.hasOrientationSupport();
-    const hasHighDpi = this.hasHighDpi();
 
     /**
-     * Lógica de decisão:
-     * - Se tem touch REAL (não simulado) E viewport pequeno: é móvel
-     * - Se tem user agent móvel E touch real E viewport < 768px: é móvel
-     * - Se viewport é MUITO pequeno (< 480px) E tem qualquer touch: é móvel
-     * - Caso contrário: não é móvel
+     * Nova lógica (não foca em resolução):
+     * 1. Se tem touch REAL + user agent mobile + viewport típico de smartphone (< 600px) = É MOBILE
+     * 2. Se viewport muito pequeno (< 480px) mesmo sem touch = É MOBILE (fallback)
+     * 3. Caso contrário: NÃO é mobile (pode ser tablet ou desktop)
      */
 
-    const isMobileByViewport = viewportWidth < 480; // Definitivamente móvel
-    const isMobileByTouch = hasRealTouchSupport && viewportWidth < 768;
-    const isMobileByUserAgent = hasMobileUserAgent && hasRealTouchSupport && viewportWidth < 768;
+    // Smartphone típico: tem touch + UA mobile + tela pequena
+    const isSmartphone = hasRealTouchSupport && hasMobileUserAgent && viewportWidth < 600;
+    
+    // Fallback: tela muito pequena (provável smartphone antigo)
+    const isTinyScreen = viewportWidth < 480;
 
-    this.cachedIsMobile = isMobileByViewport || isMobileByTouch || isMobileByUserAgent;
+    this.cachedIsMobile = isSmartphone || isTinyScreen;
     return this.cachedIsMobile;
   }
 
   /**
    * Detecta se é um dispositivo tablet
+   * PRIORIZA: Touch real + User Agent mobile + não é smartphone
+   * Resolução é critério SECUNDÁRIO
    */
   isTablet(): boolean {
     if (this.cachedIsTablet !== null) {
@@ -87,12 +89,15 @@ export class DeviceDetectorService {
     const hasMobileUserAgent = this.hasMobileUserAgent();
     const viewportWidth = window.innerWidth;
 
-    // Tablet: tem touch, user agent de móvel, mas viewport maior (768-1024px)
+    /**
+     * Nova lógica (não foca em resolução):
+     * - Tem touch REAL + user agent mobile + viewport >= 600px = É TABLET
+     * - Independente se está em portrait (800px) ou landscape (1280px)
+     */
     this.cachedIsTablet = 
       hasRealTouchSupport &&
       hasMobileUserAgent &&
-      viewportWidth >= 768 &&
-      viewportWidth < 1025;
+      viewportWidth >= 600; // Acima de smartphone, qualquer resolução
 
     return this.cachedIsTablet;
   }

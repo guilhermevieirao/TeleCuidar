@@ -84,7 +84,7 @@ public static class DataSeeder
             new User
             {
                 Name = "Paciente",
-                LastName = "Teste",
+                LastName = "Dev",
                 Email = "pac@pac.com",
                 Cpf = "33333333333",
                 Phone = "11933333333",

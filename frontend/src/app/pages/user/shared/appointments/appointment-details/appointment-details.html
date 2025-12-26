@@ -1,4 +1,4 @@
-<div class="appointment-details">
+<div class="appointment-details" [class.details-view]="isDetailsView">
   <!-- Header -->
   <div class="appointment-details__header">
     <div class="appointment-details__header-actions">
@@ -211,24 +211,37 @@
           </div>
         }
 
+        <!-- Atestado Tab -->
+        @if (activeTab === 'atestado') {
+          <div class="tab-panel">
+            <app-atestado-tab
+              [appointmentId]="appointmentId"
+              [userrole]="userrole"
+              [readonly]="true"
+            />
+          </div>
+        }
+
         <!-- Encaminhamento Tab -->
-        @if (activeTab === 'encaminhamento') {
+        @if (activeTab === 'referral') {
           <div class="tab-panel">
             <app-referral-tab
               [appointmentId]="appointmentId"
               [appointment]="appointment"
               [userrole]="userrole"
+              [readonly]="isDetailsView"
             />
           </div>
         }
 
         <!-- Retorno Tab -->
-        @if (activeTab === 'retorno') {
+        @if (activeTab === 'return') {
           <div class="tab-panel">
             <app-return-tab
               [appointmentId]="appointmentId"
               [appointment]="appointment"
               [userrole]="userrole"
+              [readonly]="isDetailsView"
             />
           </div>
         }

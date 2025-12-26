@@ -22,7 +22,7 @@
       </div>
     </div>
 
-    <app-button variant="outline" (click)="scheduleAnother()">
+    <app-button variant="outline" (click)="scheduleAnother()" *ngIf="!readonly">
       <app-icon name="check" [size]="16"></app-icon>
       Concluir
     </app-button>
@@ -40,7 +40,7 @@
           </div>
         </div>
       </div>
-      <div class="header-actions">
+      <div class="header-actions" *ngIf="!readonly">
         <app-button variant="primary" size="sm" (click)="startNewReturn()">
           <app-icon name="plus" [size]="16"></app-icon>
           Novo Retorno
@@ -88,7 +88,7 @@
   </ng-container>
 
   <!-- Scheduling Flow -->
-  <ng-container *ngIf="!returnScheduled && viewMode === 'scheduling'">
+  <ng-container *ngIf="!returnScheduled && viewMode === 'scheduling' && !readonly">
     <div class="header">
       <div class="header-content">
         <app-button variant="ghost" size="sm" (click)="backToList()">

@@ -44,7 +44,7 @@
           </div>
         </div>
       </div>
-      <div class="header-actions">
+      <div class="header-actions" *ngIf="!readonly">
         <app-button variant="primary" size="sm" (click)="startNewReferral()">
           <app-icon name="plus" [size]="16"></app-icon>
           Novo Encaminhamento
@@ -100,7 +100,7 @@
   </ng-container>
 
   <!-- Scheduling Flow -->
-  <ng-container *ngIf="!referralScheduled && viewMode === 'scheduling'">
+  <ng-container *ngIf="!referralScheduled && viewMode === 'scheduling' && !readonly">
     <div class="header">
       <div class="header-content">
         <app-button variant="ghost" size="sm" (click)="backToList()">
