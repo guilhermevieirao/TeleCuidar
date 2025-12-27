@@ -54,6 +54,14 @@ export class TeleconsultationSidebarComponent implements OnInit, OnDestroy, OnCh
   @Input() userrole: 'PATIENT' | 'PROFESSIONAL' | 'ADMIN' = 'PATIENT';
   @Input() appointmentId: string | null = null;
   @Input() appointment: Appointment | null = null;
+  
+  // Data inputs for AI tab
+  @Input() patientData: any = null;
+  @Input() preConsultationData: any = null;
+  @Input() anamnesisData: any = null;
+  @Input() biometricsData: any = null;
+  @Input() soapData: any = null;
+  @Input() specialtyFieldsData: any = null;
 
   @Output() toggle = new EventEmitter<void>();
   @Output() toggleMode = new EventEmitter<void>();

@@ -14,7 +14,7 @@ namespace Infrastructure.Services;
 
 /// <summary>
 /// Serviço de integração com CADSUS (Cadastro Nacional de Usuários do SUS)
-/// Utiliza certificado digital A1 (.pfx) para autenticação e requisições SOAP
+/// Utiliza certificado digital A1 (.pfx) para autenticação via HttpClient
 /// Funciona em Windows, Linux e macOS
 /// </summary>
 public class CnsService : ICnsService
@@ -96,13 +96,19 @@ public class CnsService : ICnsService
         _logger = logger;
         
         // Configurar variáveis de ambiente
-        _certPath = Environment.GetEnvironmentVariable("CNS_CERT_PATH") 
+        var certPathRaw = Environment.GetEnvironmentVariable("CNS_CERT_PATH") 
                     ?? Environment.GetEnvironmentVariable("CADSUS_CERT_PATH");
         _certPassword = Environment.GetEnvironmentVariable("CNS_CERT_PASSWORD") 
                         ?? Environment.GetEnvironmentVariable("CADSUS_CERT_PASSWORD");
         _ambiente = Environment.GetEnvironmentVariable("CNS_AMBIENTE") 
                     ?? Environment.GetEnvironmentVariable("CADSUS_AMBIENTE") 
                     ?? "producao";
+        
+        _logger.LogInformation("CNS: Lendo configurações - CertPath={CertPath}, Password={PasswordLength} chars, Ambiente={Ambiente}", 
+            certPathRaw ?? "(null)", _certPassword?.Length ?? 0, _ambiente);
+        
+        // Resolver caminho do certificado (suporta caminhos relativos à raiz do projeto)
+        _certPath = ResolveCertificatePath(certPathRaw);
         
         var isProd = _ambiente.Equals("producao", StringComparison.OrdinalIgnoreCase) 
                      || _ambiente.Equals("prod", StringComparison.OrdinalIgnoreCase);
@@ -119,7 +125,8 @@ public class CnsService : ICnsService
         }
         else
         {
-            _logger.LogWarning("CNS Service não configurado. Defina CNS_CERT_PATH e CNS_CERT_PASSWORD.");
+            _logger.LogWarning("CNS Service não configurado. Defina CNS_CERT_PATH e CNS_CERT_PASSWORD. Caminho tentado: {CertPath}", 
+                certPathRaw ?? "(não definido)");
         }
         
         // Configurar HttpClient com handler que aceita certificados
@@ -129,6 +136,42 @@ public class CnsService : ICnsService
         };
         _httpClient = new HttpClient(handler);
         _httpClient.Timeout = TimeSpan.FromSeconds(30);
+    }
+    
+    /// <summary>
+    /// Resolve o caminho do certificado, suportando caminhos relativos à raiz do projeto
+    /// </summary>
+    private static string? ResolveCertificatePath(string? certPath)
+    {
+        if (string.IsNullOrEmpty(certPath))
+            return null;
+        
+        // Se é caminho absoluto e existe, retorna direto
+        if (Path.IsPathRooted(certPath) && File.Exists(certPath))
+            return certPath;
+        
+        // Tentar resolver relativo ao diretório atual
+        var currentDirPath = Path.GetFullPath(certPath);
+        if (File.Exists(currentDirPath))
+            return currentDirPath;
+        
+        // Tentar resolver relativo à raiz do projeto (2 níveis acima de WebAPI)
+        var projectRoot = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", ".."));
+        var projectRootPath = Path.Combine(projectRoot, certPath.TrimStart('.', '/', '\\'));
+        if (File.Exists(projectRootPath))
+            return projectRootPath;
+        
+        // Tentar no diretório do assembly
+        var assemblyDir = Path.GetDirectoryName(typeof(CnsService).Assembly.Location);
+        if (!string.IsNullOrEmpty(assemblyDir))
+        {
+            var assemblyPath = Path.Combine(assemblyDir, certPath.TrimStart('.', '/', '\\'));
+            if (File.Exists(assemblyPath))
+                return assemblyPath;
+        }
+        
+        // Retorna o caminho original (pode não existir, mas será tratado depois)
+        return certPath;
     }
 
     public bool IsConfigured() => _isConfigured;
@@ -226,21 +269,22 @@ public class CnsService : ICnsService
 
         try
         {
-            string responseJson;
-            
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                // Windows: usar PowerShell para autenticação com certificado
-                responseJson = await GetTokenViaWindowsAsync();
-            }
-            else
-            {
-                // Linux/macOS: usar curl ou HttpClient com certificado
-                responseJson = await GetTokenViaCurlAsync();
-            }
+            // Usar HttpClient com certificado (funciona em Windows, Linux e macOS)
+            var responseJson = await GetTokenViaHttpClientAsync();
 
             // Parsear resposta JSON
             using var doc = JsonDocument.Parse(responseJson);
+            
+            // Verificar se há erro na resposta
+            if (doc.RootElement.TryGetProperty("error", out var errorElement))
+            {
+                var errorMsg = errorElement.GetString();
+                var errorDesc = doc.RootElement.TryGetProperty("error_description", out var descElement) 
+                    ? descElement.GetString() 
+                    : "Erro desconhecido";
+                throw new InvalidOperationException($"Erro de autenticação DATASUS: {errorMsg} - {errorDesc}");
+            }
+            
             var accessToken = doc.RootElement.GetProperty("access_token").GetString();
             
             if (string.IsNullOrEmpty(accessToken))
@@ -248,14 +292,22 @@ public class CnsService : ICnsService
                 throw new InvalidOperationException("Token de acesso não encontrado na resposta");
             }
 
+            // Tentar obter tempo de expiração do token
+            var expiresInMinutes = 30; // Padrão
+            if (doc.RootElement.TryGetProperty("expires_in", out var expiresElement))
+            {
+                var expiresInSeconds = expiresElement.GetInt32();
+                expiresInMinutes = expiresInSeconds / 60;
+            }
+
             lock (_tokenLock)
             {
                 _token = accessToken;
-                _tokenExpiry = DateTime.UtcNow.AddMinutes(30); // Token válido por 30 minutos
+                _tokenExpiry = DateTime.UtcNow.AddMinutes(expiresInMinutes);
             }
 
-            _logger.LogInformation("Token obtido com sucesso. Expira em: {Expiry}", 
-                _tokenExpiry?.ToLocalTime().ToString("HH:mm:ss"));
+            _logger.LogInformation("Token obtido com sucesso. Expira em: {Expiry} ({Minutes} min)", 
+                _tokenExpiry?.ToLocalTime().ToString("HH:mm:ss"), expiresInMinutes);
             
             return _token;
         }
@@ -266,128 +318,122 @@ public class CnsService : ICnsService
         }
     }
 
-    private async Task<string> GetTokenViaWindowsAsync()
+    private async Task<string> GetTokenViaHttpClientAsync()
     {
-        // Usar PowerShell no Windows para autenticação com certificado
-        var psScript = $@"
+        // Usar curl para fazer a requisição com certificado (funciona em Linux e Windows)
+        // O curl lida melhor com certificados .pfx para autenticação mTLS
+        
+        _logger.LogInformation("Obtendo token usando curl. URL={Url}, CertPath={CertPath}", _authUrl, _certPath);
+        
+        // Verificar se o certificado existe
+        if (!File.Exists(_certPath))
+        {
+            throw new InvalidOperationException($"Certificado não encontrado: {_certPath}");
+        }
+        
+        string output;
+        
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            // No Windows, usar PowerShell com Invoke-WebRequest (como no apiDados)
+            output = await ExecuteWithPowerShellAsync();
+        }
+        else
+        {
+            // No Linux/macOS, usar curl com certificado .pfx
+            output = await ExecuteWithCurlAsync();
+        }
+        
+        _logger.LogInformation("Resposta do DATASUS recebida. Tamanho: {Length} bytes", output.Length);
+        
+        return output;
+    }
+    
+    private async Task<string> ExecuteWithCurlAsync()
+    {
+        // curl suporta certificado .pfx diretamente com --cert e --pass
+        // Formato: curl --cert certificado.pfx:senha URL
+        var certArg = $"{_certPath}:{_certPassword}";
+        
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "curl",
+            Arguments = $"-s -k --cert-type P12 --cert \"{certArg}\" \"{_authUrl}\"",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        
+        _logger.LogDebug("Executando: curl --cert-type P12 --cert [CERT] {Url}", _authUrl);
+        
+        using var process = new Process { StartInfo = startInfo };
+        process.Start();
+        
+        var output = await process.StandardOutput.ReadToEndAsync();
+        var error = await process.StandardError.ReadToEndAsync();
+        
+        await process.WaitForExitAsync();
+        
+        if (process.ExitCode != 0)
+        {
+            _logger.LogError("Erro no curl. ExitCode={ExitCode}, StdErr={StdErr}", process.ExitCode, error);
+            throw new InvalidOperationException($"Erro ao obter token via curl: {error}");
+        }
+        
+        if (string.IsNullOrWhiteSpace(output))
+        {
+            throw new InvalidOperationException("Resposta vazia do servidor DATASUS");
+        }
+        
+        return output;
+    }
+    
+    private async Task<string> ExecuteWithPowerShellAsync()
+    {
+        // Usar PowerShell com Invoke-WebRequest e certificado (como no apiDados)
+        var psCommand = $@"
 $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2('{_certPath}', '{_certPassword}')
-$response = Invoke-WebRequest -Uri '{_authUrl}' -Certificate $cert -UseBasicParsing
-$response.Content
-";
-
-        var tempScript = Path.Combine(Path.GetTempPath(), $"cns_auth_{Guid.NewGuid()}.ps1");
-        try
-        {
-            await File.WriteAllTextAsync(tempScript, psScript, Encoding.UTF8);
-            
-            var psi = new ProcessStartInfo
-            {
-                FileName = "powershell",
-                Arguments = $"-ExecutionPolicy Bypass -File \"{tempScript}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            using var process = Process.Start(psi);
-            if (process == null)
-            {
-                throw new InvalidOperationException("Falha ao iniciar PowerShell");
-            }
-
-            var output = await process.StandardOutput.ReadToEndAsync();
-            var error = await process.StandardError.ReadToEndAsync();
-            
-            await process.WaitForExitAsync();
-
-            if (process.ExitCode != 0)
-            {
-                _logger.LogError("PowerShell error: {Error}", error);
-                throw new InvalidOperationException($"Erro no PowerShell: {error}");
-            }
-
-            return output.Trim();
-        }
-        finally
-        {
-            if (File.Exists(tempScript))
-            {
-                File.Delete(tempScript);
-            }
-        }
-    }
-
-    private async Task<string> GetTokenViaCurlAsync()
-    {
-        // Linux/macOS: usar curl com certificado PFX
-        var tempPem = Path.Combine(Path.GetTempPath(), $"cns_cert_{Guid.NewGuid()}.pem");
-        var tempKey = Path.Combine(Path.GetTempPath(), $"cns_key_{Guid.NewGuid()}.pem");
+try {{
+    $response = Invoke-WebRequest -Uri '{_authUrl}' -Certificate $cert -UseBasicParsing
+    Write-Output $response.Content
+}} catch {{
+    Write-Error $_.Exception.Message
+    exit 1
+}}";
         
-        try
+        var startInfo = new ProcessStartInfo
         {
-            // Extrair PEM do PFX
-            await ExtractPemFromPfxAsync(tempPem, tempKey);
-            
-            var psi = new ProcessStartInfo
-            {
-                FileName = "curl",
-                Arguments = $"-s --cert \"{tempPem}\" --key \"{tempKey}\" \"{_authUrl}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            using var process = Process.Start(psi);
-            if (process == null)
-            {
-                throw new InvalidOperationException("Falha ao iniciar curl");
-            }
-
-            var output = await process.StandardOutput.ReadToEndAsync();
-            var error = await process.StandardError.ReadToEndAsync();
-            
-            await process.WaitForExitAsync();
-
-            if (process.ExitCode != 0)
-            {
-                _logger.LogError("Curl error: {Error}", error);
-                throw new InvalidOperationException($"Erro no curl: {error}");
-            }
-
-            return output.Trim();
-        }
-        finally
-        {
-            if (File.Exists(tempPem)) File.Delete(tempPem);
-            if (File.Exists(tempKey)) File.Delete(tempKey);
-        }
-    }
-
-    private async Task ExtractPemFromPfxAsync(string certPath, string keyPath)
-    {
-        var cert = X509CertificateLoader.LoadPkcs12FromFile(_certPath!, _certPassword, 
-            X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+            FileName = "powershell",
+            Arguments = $"-NoProfile -NonInteractive -Command \"{psCommand.Replace("\"", "\\\"")}\"",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
         
-        // Exportar certificado
-        var certPem = new StringBuilder();
-        certPem.AppendLine("-----BEGIN CERTIFICATE-----");
-        certPem.AppendLine(Convert.ToBase64String(cert.RawData, Base64FormattingOptions.InsertLineBreaks));
-        certPem.AppendLine("-----END CERTIFICATE-----");
-        await File.WriteAllTextAsync(certPath, certPem.ToString());
+        _logger.LogDebug("Executando PowerShell para obter token");
         
-        // Exportar chave privada
-        var privateKey = cert.GetRSAPrivateKey();
-        if (privateKey != null)
+        using var process = new Process { StartInfo = startInfo };
+        process.Start();
+        
+        var output = await process.StandardOutput.ReadToEndAsync();
+        var error = await process.StandardError.ReadToEndAsync();
+        
+        await process.WaitForExitAsync();
+        
+        if (process.ExitCode != 0 || !string.IsNullOrWhiteSpace(error))
         {
-            var keyBytes = privateKey.ExportRSAPrivateKey();
-            var keyPem = new StringBuilder();
-            keyPem.AppendLine("-----BEGIN RSA PRIVATE KEY-----");
-            keyPem.AppendLine(Convert.ToBase64String(keyBytes, Base64FormattingOptions.InsertLineBreaks));
-            keyPem.AppendLine("-----END RSA PRIVATE KEY-----");
-            await File.WriteAllTextAsync(keyPath, keyPem.ToString());
+            _logger.LogError("Erro no PowerShell. ExitCode={ExitCode}, StdErr={StdErr}", process.ExitCode, error);
+            throw new InvalidOperationException($"Erro ao obter token via PowerShell: {error}");
         }
+        
+        if (string.IsNullOrWhiteSpace(output))
+        {
+            throw new InvalidOperationException("Resposta vazia do servidor DATASUS");
+        }
+        
+        return output.Trim();
     }
 
     private string BuildSoapRequest(string cpf)
@@ -434,135 +480,143 @@ $response.Content
 
     private async Task<string> ExecuteSoapRequestAsync(string soapRequest, string token)
     {
+        // Usar comandos do sistema operacional para requisição SOAP com certificado
+        _logger.LogInformation("Executando requisição SOAP. URL={Url}", _queryUrl);
+        
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            return await ExecuteSoapViaWindowsAsync(soapRequest, token);
+            return await ExecuteSoapWithPowerShellAsync(soapRequest, token);
         }
         else
         {
-            return await ExecuteSoapViaCurlAsync(soapRequest, token);
+            return await ExecuteSoapWithCurlAsync(soapRequest, token);
         }
     }
-
-    private async Task<string> ExecuteSoapViaWindowsAsync(string soapRequest, string token)
+    
+    private async Task<string> ExecuteSoapWithCurlAsync(string soapRequest, string token)
     {
-        var tempSoap = Path.Combine(Path.GetTempPath(), $"cns_soap_{Guid.NewGuid()}.xml");
-        var tempScript = Path.Combine(Path.GetTempPath(), $"cns_query_{Guid.NewGuid()}.ps1");
+        // Salvar o XML SOAP em arquivo temporário
+        var tempFile = Path.Combine(Path.GetTempPath(), $"cadsus_soap_{Guid.NewGuid()}.xml");
+        await File.WriteAllTextAsync(tempFile, soapRequest, Encoding.UTF8);
         
         try
         {
-            await File.WriteAllTextAsync(tempSoap, soapRequest, Encoding.UTF8);
+            var certArg = $"{_certPath}:{_certPassword}";
             
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "curl",
+                Arguments = $"-s -k --cert-type P12 --cert \"{certArg}\" " +
+                           $"-H \"Content-Type: application/soap+xml; charset=utf-8\" " +
+                           $"-H \"Authorization: jwt {token}\" " +
+                           $"-d @\"{tempFile}\" \"{_queryUrl}\"",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            
+            _logger.LogDebug("Executando curl para requisição SOAP");
+            
+            using var process = new Process { StartInfo = startInfo };
+            process.Start();
+            
+            var output = await process.StandardOutput.ReadToEndAsync();
+            var error = await process.StandardError.ReadToEndAsync();
+            
+            await process.WaitForExitAsync();
+            
+            if (process.ExitCode != 0)
+            {
+                _logger.LogError("Erro no curl SOAP. ExitCode={ExitCode}, StdErr={StdErr}", process.ExitCode, error);
+                throw new InvalidOperationException($"Erro na requisição SOAP via curl: {error}");
+            }
+            
+            return output;
+        }
+        finally
+        {
+            // Limpar arquivo temporário
+            try { File.Delete(tempFile); } catch { }
+        }
+    }
+    
+    private async Task<string> ExecuteSoapWithPowerShellAsync(string soapRequest, string token)
+    {
+        // Salvar o XML SOAP em arquivo temporário
+        var tempFile = Path.Combine(Path.GetTempPath(), $"cadsus_soap_{Guid.NewGuid()}.xml");
+        await File.WriteAllTextAsync(tempFile, soapRequest, Encoding.UTF8);
+        
+        try
+        {
             var psScript = $@"
 $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2('{_certPath}', '{_certPassword}')
 $headers = @{{
-  'Content-Type' = 'application/soap+xml; charset=utf-8'
-  'Authorization' = 'jwt {token}'
+    'Content-Type' = 'application/soap+xml; charset=utf-8'
+    'Authorization' = 'jwt {token}'
 }}
-$body = Get-Content -Path '{tempSoap}' -Raw -Encoding UTF8
+$body = Get-Content -Path '{tempFile}' -Raw -Encoding UTF8
 
 try {{
-  $response = Invoke-WebRequest -Uri '{_queryUrl}' -Method POST -Headers $headers -Body $body -Certificate $cert -UseBasicParsing
-  Write-Output $response.Content
+    $response = Invoke-WebRequest -Uri '{_queryUrl}' -Method POST -Headers $headers -Body $body -Certificate $cert -UseBasicParsing
+    Write-Output $response.Content
 }} catch {{
-  $errorDetails = @{{
-    StatusCode = $_.Exception.Response.StatusCode.value__
-    StatusDescription = $_.Exception.Response.StatusDescription
-    ErrorMessage = $_.Exception.Message
-  }}
-  Write-Error ($errorDetails | ConvertTo-Json -Compress)
-  exit 1
-}}
-";
-
-            await File.WriteAllTextAsync(tempScript, psScript, Encoding.UTF8);
+    $errorMsg = $_.Exception.Message
+    if ($_.Exception.Response) {{
+        try {{
+            $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+            $errorMsg = $reader.ReadToEnd()
+            $reader.Close()
+        }} catch {{}}
+    }}
+    Write-Error $errorMsg
+    exit 1
+}}";
             
-            var psi = new ProcessStartInfo
-            {
-                FileName = "powershell",
-                Arguments = $"-ExecutionPolicy Bypass -File \"{tempScript}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            using var process = Process.Start(psi);
-            if (process == null)
-            {
-                throw new InvalidOperationException("Falha ao iniciar PowerShell");
-            }
-
-            var output = await process.StandardOutput.ReadToEndAsync();
-            var error = await process.StandardError.ReadToEndAsync();
+            // Salvar script PowerShell em arquivo temporário
+            var psScriptFile = Path.Combine(Path.GetTempPath(), $"cadsus_ps_{Guid.NewGuid()}.ps1");
+            await File.WriteAllTextAsync(psScriptFile, psScript, Encoding.UTF8);
             
-            await process.WaitForExitAsync();
-
-            if (process.ExitCode != 0)
+            try
             {
-                _logger.LogError("SOAP request failed: {Error}", error);
-                throw new InvalidOperationException($"Erro na requisição SOAP: {error}");
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = "powershell",
+                    Arguments = $"-ExecutionPolicy Bypass -NoProfile -NonInteractive -File \"{psScriptFile}\"",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                
+                _logger.LogDebug("Executando PowerShell para requisição SOAP");
+                
+                using var process = new Process { StartInfo = startInfo };
+                process.Start();
+                
+                var output = await process.StandardOutput.ReadToEndAsync();
+                var error = await process.StandardError.ReadToEndAsync();
+                
+                await process.WaitForExitAsync();
+                
+                if (process.ExitCode != 0 || !string.IsNullOrWhiteSpace(error))
+                {
+                    _logger.LogError("Erro no PowerShell SOAP. ExitCode={ExitCode}, StdErr={StdErr}", process.ExitCode, error);
+                    throw new InvalidOperationException($"Erro na requisição SOAP via PowerShell: {error}");
+                }
+                
+                return output;
             }
-
-            return output;
+            finally
+            {
+                // Limpar script temporário
+                try { File.Delete(psScriptFile); } catch { }
+            }
         }
         finally
         {
-            if (File.Exists(tempSoap)) File.Delete(tempSoap);
-            if (File.Exists(tempScript)) File.Delete(tempScript);
-        }
-    }
-
-    private async Task<string> ExecuteSoapViaCurlAsync(string soapRequest, string token)
-    {
-        var tempSoap = Path.Combine(Path.GetTempPath(), $"cns_soap_{Guid.NewGuid()}.xml");
-        var tempPem = Path.Combine(Path.GetTempPath(), $"cns_cert_{Guid.NewGuid()}.pem");
-        var tempKey = Path.Combine(Path.GetTempPath(), $"cns_key_{Guid.NewGuid()}.pem");
-        
-        try
-        {
-            await File.WriteAllTextAsync(tempSoap, soapRequest, Encoding.UTF8);
-            await ExtractPemFromPfxAsync(tempPem, tempKey);
-            
-            var psi = new ProcessStartInfo
-            {
-                FileName = "curl",
-                Arguments = $"-s -X POST " +
-                           $"-H \"Content-Type: application/soap+xml; charset=utf-8\" " +
-                           $"-H \"Authorization: jwt {token}\" " +
-                           $"--cert \"{tempPem}\" --key \"{tempKey}\" " +
-                           $"-d @\"{tempSoap}\" " +
-                           $"\"{_queryUrl}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            using var process = Process.Start(psi);
-            if (process == null)
-            {
-                throw new InvalidOperationException("Falha ao iniciar curl");
-            }
-
-            var output = await process.StandardOutput.ReadToEndAsync();
-            var error = await process.StandardError.ReadToEndAsync();
-            
-            await process.WaitForExitAsync();
-
-            if (process.ExitCode != 0)
-            {
-                _logger.LogError("SOAP request via curl failed: {Error}", error);
-                throw new InvalidOperationException($"Erro na requisição SOAP: {error}");
-            }
-
-            return output;
-        }
-        finally
-        {
-            if (File.Exists(tempSoap)) File.Delete(tempSoap);
-            if (File.Exists(tempPem)) File.Delete(tempPem);
-            if (File.Exists(tempKey)) File.Delete(tempKey);
+            // Limpar arquivo temporário
+            try { File.Delete(tempFile); } catch { }
         }
     }
 

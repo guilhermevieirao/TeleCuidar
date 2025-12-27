@@ -94,7 +94,11 @@
             </div>
             <div class="profile__field">
               <span class="profile__field-label">Perfil</span>
-              <span class="profile__field-value">{{ getRoleLabel(user.role) }}</span>
+              <app-badge
+                [variant]="user.role === 'PROFESSIONAL' ? 'info' : user.role === 'PATIENT' ? 'success' : 'primary'"
+                [label]="getRoleLabel(user.role)"
+                size="sm"
+              />
             </div>
             <div class="profile__field">
               <span class="profile__field-label">Membro desde</span>

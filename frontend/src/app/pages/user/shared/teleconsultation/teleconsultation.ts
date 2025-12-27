@@ -11,6 +11,7 @@ import { ModalService } from '@core/services/modal.service';
 import { AuthService } from '@core/services/auth.service';
 import { DeviceDetectorService } from '@core/services/device-detector.service';
 import { TeleconsultationRealTimeService, StatusChangedEvent, DataUpdatedEvent } from '@core/services/teleconsultation-realtime.service';
+import { TeleconsultationDataCollectorService } from '@core/services/teleconsultation-data-collector.service';
 import { TeleconsultationSidebarComponent } from './sidebar/teleconsultation-sidebar';
 import { getTeleconsultationTabs, TAB_ID_TO_LEGACY_NAME, TabConfig } from './tabs/tab-config';
 import { Subscription } from 'rxjs';
@@ -50,6 +51,14 @@ export class TeleconsultationComponent implements OnInit, OnDestroy {
   // Tabs configuration - usando configuração centralizada
   currentTabs: string[] = [];
   private tabConfigs: TabConfig[] = [];
+  
+  // Data for AI from other tabs
+  patientData: any = null;
+  preConsultationData: any = null;
+  anamnesisData: any = null;
+  biometricsData: any = null;
+  soapData: any = null;
+  specialtyFieldsData: any = null;
 
   private subscriptions: Subscription[] = [];
   private isBrowser: boolean;
@@ -63,6 +72,7 @@ export class TeleconsultationComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private deviceDetector: DeviceDetectorService,
     private teleconsultationRealTime: TeleconsultationRealTimeService,
+    private dataCollector: TeleconsultationDataCollectorService,
     private cdr: ChangeDetectorRef,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
@@ -182,6 +192,8 @@ export class TeleconsultationComponent implements OnInit, OnDestroy {
       next: (appt) => {
         if (appt) {
           this.appointment = appt;
+          // Coletar dados de TODAS as abas para uso na IA
+          this.collectDataFromAllTabs(id);
           this.cdr.detectChanges();
         }
       },
@@ -317,5 +329,30 @@ export class TeleconsultationComponent implements OnInit, OnDestroy {
    */
   onCallEnded(): void {
     this.isCallConnected = false;
+  }
+
+  /**
+   * Coleta dados de TODAS as abas para uso na IA
+   * Garante que o resumo e a hipótese diagnóstica usem informações completas
+   */
+  private collectDataFromAllTabs(appointmentId: string): void {
+    if (!this.appointment) return;
+
+    this.subscriptions.push(
+      this.dataCollector.collectAllData(this.appointment, appointmentId).subscribe({
+        next: (data) => {
+          this.patientData = data.patientData;
+          this.preConsultationData = data.preConsultationData;
+          this.anamnesisData = data.anamnesisData;
+          this.biometricsData = data.biometricsData;
+          this.soapData = data.soapData;
+          this.specialtyFieldsData = data.specialtyFieldsData;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('[Teleconsultation] Erro ao coletar dados das abas:', error);
+        }
+      })
+    );
   }
 }

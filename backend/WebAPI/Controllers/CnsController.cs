@@ -80,6 +80,7 @@ public class CnsController : ControllerBase
     /// </summary>
     /// <returns>Status do token incluindo validade e tempo restante</returns>
     [HttpGet("token/status")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(CnsTokenStatusDto), 200)]
     public ActionResult<CnsTokenStatusDto> GetTokenStatus()
     {
@@ -109,6 +110,7 @@ public class CnsController : ControllerBase
     /// </summary>
     /// <returns>Novo status do token após renovação</returns>
     [HttpPost("token/renew")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(CnsTokenRenewResponseDto), 200)]
     public async Task<ActionResult<CnsTokenRenewResponseDto>> RenewToken()
     {
