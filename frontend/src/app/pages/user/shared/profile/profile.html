@@ -118,6 +118,7 @@
   (close)="onEditModalClose()"
   (save)="onProfileUpdated($event)"
   (changePassword)="onChangePassword()"
+  (changeEmail)="onChangeEmail()"
 />
 
 <!-- Modal de Trocar Senha -->
@@ -125,4 +126,13 @@
   [isOpen]="isChangePasswordModalOpen"
   (close)="onChangePasswordModalClose()"
   (save)="onPasswordChanged($event)"
+/>
+
+<!-- Modal de Alterar E-mail -->
+<app-change-email-modal
+  [isOpen]="isChangeEmailModalOpen"
+  [currentEmail]="user?.email || ''"
+  [isLoading]="isRequestingEmailChange"
+  (close)="onChangeEmailModalClose()"
+  (save)="onEmailChangeRequested($event)"
 />

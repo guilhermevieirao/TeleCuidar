@@ -3,14 +3,12 @@ import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@app/shared/components/atoms/icon/icon';
 import { ButtonComponent } from '@app/shared/components/atoms/button/button';
 import { AvatarUploadComponent } from '@app/shared/components/molecules/avatar-upload/avatar-upload';
-import { CpfMaskDirective } from '@app/core/directives/cpf-mask.directive';
 import { PhoneMaskDirective } from '@app/core/directives/phone-mask.directive';
-import { EmailValidatorDirective } from '@app/core/directives/email-validator.directive';
 import { User } from '@app/core/services/users.service';
 
 @Component({
   selector: 'app-profile-edit-modal',
-  imports: [FormsModule, IconComponent, ButtonComponent, AvatarUploadComponent, CpfMaskDirective, PhoneMaskDirective, EmailValidatorDirective],
+  imports: [FormsModule, IconComponent, ButtonComponent, AvatarUploadComponent, PhoneMaskDirective],
   templateUrl: './profile-edit-modal.html',
   styleUrl: './profile-edit-modal.scss'
 })
@@ -20,6 +18,7 @@ export class ProfileEditModalComponent implements OnChanges {
   @Output() close = new EventEmitter<void>();
   @Output() save = new EventEmitter<Partial<User>>();
   @Output() changePassword = new EventEmitter<void>();
+  @Output() changeEmail = new EventEmitter<void>();
 
   editedUser: Partial<User> = {};
 
@@ -50,13 +49,15 @@ export class ProfileEditModalComponent implements OnChanges {
   isFormValid(): boolean {
     return !!(
       this.editedUser.name?.trim() &&
-      this.editedUser.email?.trim() &&
-      this.editedUser.cpf?.trim() &&
       this.editedUser.phone?.trim()
     );
   }
 
   onChangePassword(): void {
     this.changePassword.emit();
+  }
+
+  onChangeEmail(): void {
+    this.changeEmail.emit();
   }
 }

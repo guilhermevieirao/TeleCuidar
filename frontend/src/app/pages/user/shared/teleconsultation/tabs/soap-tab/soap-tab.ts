@@ -64,6 +64,8 @@ export class SoapTabComponent implements OnInit, OnDestroy, OnChanges {
         )
         .subscribe(() => {
           if (!this.isReceivingUpdate && this.appointmentId) {
+            // Salvar no cache local
+            this.saveToLocalCache();
             // Notificar outros participantes sobre a mudança (preview)
             this.teleconsultationRealTime.notifyDataUpdated(
               this.appointmentId,
@@ -122,10 +124,19 @@ export class SoapTabComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   loadSoapData() {
+    // Primeiro verificar se há dados no cache local (mais recentes)
+    const cachedData = this.loadFromLocalCache();
+    if (cachedData) {
+      this.soapForm.patchValue(cachedData, { emitEvent: false });
+      this.soapForm.markAsPristine();
+      this.dataLoaded = true;
+      return;
+    }
+    
     if (this.appointment?.soapJson) {
       try {
         const soapData = JSON.parse(this.appointment.soapJson);
-        this.soapForm.patchValue(soapData);
+        this.soapForm.patchValue(soapData, { emitEvent: false });
         this.soapForm.markAsPristine();
         this.dataLoaded = true;
       } catch (error) {
@@ -134,6 +145,38 @@ export class SoapTabComponent implements OnInit, OnDestroy, OnChanges {
     } else if (this.appointment) {
       // Appointment existe mas não tem dados de SOAP ainda
       this.dataLoaded = true;
+    }
+  }
+
+  private getCacheKey(): string {
+    return `soap_${this.appointmentId}`;
+  }
+
+  private saveToLocalCache(): void {
+    if (!this.appointmentId) return;
+    try {
+      sessionStorage.setItem(this.getCacheKey(), JSON.stringify(this.soapForm.value));
+    } catch (e) {
+      // Ignorar erros de sessionStorage
+    }
+  }
+
+  private loadFromLocalCache(): any {
+    if (!this.appointmentId) return null;
+    try {
+      const cached = sessionStorage.getItem(this.getCacheKey());
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  private clearLocalCache(): void {
+    if (!this.appointmentId) return;
+    try {
+      sessionStorage.removeItem(this.getCacheKey());
+    } catch (e) {
+      // Ignorar erros de sessionStorage
     }
   }
 
@@ -151,6 +194,8 @@ export class SoapTabComponent implements OnInit, OnDestroy, OnChanges {
           this.isSaving = false;
           this.lastSaved = new Date();
           this.soapForm.markAsPristine();
+          // Limpar cache após salvar com sucesso
+          this.clearLocalCache();
           this.cdr.detectChanges();
         },
         error: (error) => {

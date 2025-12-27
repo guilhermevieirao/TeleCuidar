@@ -105,6 +105,8 @@ export class AnamnesisTabComponent implements OnInit, OnDestroy, OnChanges {
       )
       .subscribe(() => {
         if (!this.isReceivingUpdate && this.appointmentId) {
+          // Salvar no cache local
+          this.saveToLocalCache();
           // Notificar outros participantes sobre a mudança (preview)
           this.teleconsultationRealTime.notifyDataUpdated(
             this.appointmentId,
@@ -162,11 +164,20 @@ export class AnamnesisTabComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   loadAnamnesisData() {
+    // Primeiro verificar se há dados no cache local (mais recentes)
+    const cachedData = this.loadFromLocalCache();
+    if (cachedData) {
+      this.anamnesisForm.patchValue(cachedData, { emitEvent: false });
+      this.anamnesisForm.markAsPristine();
+      this.dataLoaded = true;
+      return;
+    }
+    
     // Carregar dados da anamnese do appointment
     if (this.appointment?.anamnesisJson) {
       try {
         const anamnesisData = JSON.parse(this.appointment.anamnesisJson);
-        this.anamnesisForm.patchValue(anamnesisData);
+        this.anamnesisForm.patchValue(anamnesisData, { emitEvent: false });
         this.anamnesisForm.markAsPristine();
         this.dataLoaded = true;
       } catch (error) {
@@ -175,6 +186,38 @@ export class AnamnesisTabComponent implements OnInit, OnDestroy, OnChanges {
     } else if (this.appointment) {
       // Appointment existe mas não tem dados de anamnese ainda
       this.dataLoaded = true;
+    }
+  }
+
+  private getCacheKey(): string {
+    return `anamnesis_${this.appointmentId}`;
+  }
+
+  private saveToLocalCache(): void {
+    if (!this.appointmentId) return;
+    try {
+      sessionStorage.setItem(this.getCacheKey(), JSON.stringify(this.anamnesisForm.value));
+    } catch (e) {
+      // Ignorar erros de sessionStorage
+    }
+  }
+
+  private loadFromLocalCache(): any {
+    if (!this.appointmentId) return null;
+    try {
+      const cached = sessionStorage.getItem(this.getCacheKey());
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  private clearLocalCache(): void {
+    if (!this.appointmentId) return;
+    try {
+      sessionStorage.removeItem(this.getCacheKey());
+    } catch (e) {
+      // Ignorar erros de sessionStorage
     }
   }
 
@@ -192,6 +235,8 @@ export class AnamnesisTabComponent implements OnInit, OnDestroy, OnChanges {
           this.isSaving = false;
           this.lastSaved = new Date();
           this.anamnesisForm.markAsPristine();
+          // Limpar cache após salvar com sucesso
+          this.clearLocalCache();
           this.cdr.detectChanges();
         },
         error: (error) => {

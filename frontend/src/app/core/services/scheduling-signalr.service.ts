@@ -52,6 +52,7 @@ export class SchedulingSignalRService implements OnDestroy {
   private hubConnection: any = null;
   private connectionPromise: Promise<void> | null = null;
   private isBrowser: boolean;
+  private isDisconnecting: boolean = false;
   
   // Estado da conexão
   private _isConnected$ = new BehaviorSubject<boolean>(false);
@@ -232,6 +233,8 @@ export class SchedulingSignalRService implements OnDestroy {
    * Desconecta do hub
    */
   async disconnect(): Promise<void> {
+    this.isDisconnecting = true;
+    
     if (this.hubConnection) {
       try {
         await this.hubConnection.stop();
@@ -245,12 +248,16 @@ export class SchedulingSignalRService implements OnDestroy {
       this.subscribedSpecialties.clear();
       this.subscribedProfessionals.clear();
     }
+    
+    this.isDisconnecting = false;
   }
 
   /**
    * Inscreve para receber atualizações de uma especialidade
    */
   async joinSpecialtyGroup(specialtyId: string): Promise<void> {
+    if (this.isDisconnecting) return;
+    
     if (!this.hubConnection || !this._isConnected$.value) {
       await this.connect();
     }
@@ -260,8 +267,14 @@ export class SchedulingSignalRService implements OnDestroy {
         await this.hubConnection.invoke('JoinSpecialtyGroup', specialtyId);
         this.subscribedSpecialties.add(specialtyId);
         console.log('[SignalR] Inscrito na especialidade:', specialtyId);
-      } catch (error) {
-        console.error('[SignalR] Erro ao inscrever na especialidade:', error);
+      } catch (error: any) {
+        // Ignorar erros de conexão fechada (ocorre durante navegação/destruição do componente)
+        if (error?.message?.includes('connection being closed') || 
+            error?.message?.includes('Invocation canceled')) {
+          console.log('[SignalR] Conexão fechada durante inscrição na especialidade (ignorando)');
+        } else {
+          console.error('[SignalR] Erro ao inscrever na especialidade:', error);
+        }
       }
     }
   }
@@ -275,8 +288,14 @@ export class SchedulingSignalRService implements OnDestroy {
         await this.hubConnection.invoke('LeaveSpecialtyGroup', specialtyId);
         this.subscribedSpecialties.delete(specialtyId);
         console.log('[SignalR] Removido da especialidade:', specialtyId);
-      } catch (error) {
-        console.error('[SignalR] Erro ao remover inscrição da especialidade:', error);
+      } catch (error: any) {
+        // Ignorar erros de conexão fechada
+        if (error?.message?.includes('connection being closed') || 
+            error?.message?.includes('Invocation canceled')) {
+          console.log('[SignalR] Conexão fechada durante remoção de especialidade (ignorando)');
+        } else {
+          console.error('[SignalR] Erro ao remover inscrição da especialidade:', error);
+        }
       }
     }
   }
@@ -285,6 +304,8 @@ export class SchedulingSignalRService implements OnDestroy {
    * Inscreve para receber atualizações de um profissional
    */
   async joinProfessionalGroup(professionalId: string): Promise<void> {
+    if (this.isDisconnecting) return;
+    
     if (!this.hubConnection || !this._isConnected$.value) {
       await this.connect();
     }
@@ -294,8 +315,14 @@ export class SchedulingSignalRService implements OnDestroy {
         await this.hubConnection.invoke('JoinProfessionalGroup', professionalId);
         this.subscribedProfessionals.add(professionalId);
         console.log('[SignalR] Inscrito no profissional:', professionalId);
-      } catch (error) {
-        console.error('[SignalR] Erro ao inscrever no profissional:', error);
+      } catch (error: any) {
+        // Ignorar erros de conexão fechada (ocorre durante navegação/destruição do componente)
+        if (error?.message?.includes('connection being closed') || 
+            error?.message?.includes('Invocation canceled')) {
+          console.log('[SignalR] Conexão fechada durante inscrição no profissional (ignorando)');
+        } else {
+          console.error('[SignalR] Erro ao inscrever no profissional:', error);
+        }
       }
     }
   }
@@ -309,8 +336,14 @@ export class SchedulingSignalRService implements OnDestroy {
         await this.hubConnection.invoke('LeaveProfessionalGroup', professionalId);
         this.subscribedProfessionals.delete(professionalId);
         console.log('[SignalR] Removido do profissional:', professionalId);
-      } catch (error) {
-        console.error('[SignalR] Erro ao remover inscrição do profissional:', error);
+      } catch (error: any) {
+        // Ignorar erros de conexão fechada
+        if (error?.message?.includes('connection being closed') || 
+            error?.message?.includes('Invocation canceled')) {
+          console.log('[SignalR] Conexão fechada durante remoção de profissional (ignorando)');
+        } else {
+          console.error('[SignalR] Erro ao remover inscrição do profissional:', error);
+        }
       }
     }
   }

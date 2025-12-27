@@ -3,6 +3,7 @@ import { IconComponent } from '@app/shared/components/atoms/icon/icon';
 import { AvatarComponent } from '@app/shared/components/atoms/avatar/avatar';
 import { ProfileEditModalComponent } from '@pages/user/shared/profile/profile-edit-modal/profile-edit-modal';
 import { ChangePasswordModalComponent } from '@pages/user/shared/profile/change-password-modal/change-password-modal';
+import { ChangeEmailModalComponent } from '@pages/user/shared/profile/change-email-modal/change-email-modal';
 import { User, UsersService, UpdateUserDto } from '@app/core/services/users.service';
 import { DatePipe } from '@angular/common';
 import { BadgeComponent } from '@app/shared/components/atoms/badge/badge';
@@ -12,7 +13,7 @@ import { AuthService } from '@app/core/services/auth.service';
 
 @Component({
   selector: 'app-profile',
-  imports: [IconComponent, AvatarComponent, ProfileEditModalComponent, ChangePasswordModalComponent, DatePipe, BadgeComponent, ButtonComponent],
+  imports: [IconComponent, AvatarComponent, ProfileEditModalComponent, ChangePasswordModalComponent, ChangeEmailModalComponent, DatePipe, BadgeComponent, ButtonComponent],
   templateUrl: './profile.html',
   styleUrl: './profile.scss'
 })
@@ -22,7 +23,9 @@ export class ProfileComponent implements OnInit {
   isSendingVerification = false;
   isEditModalOpen = false;
   isChangePasswordModalOpen = false;
+  isChangeEmailModalOpen = false;
   isUpdatingProfile = false;
+  isRequestingEmailChange = false;
 
   constructor(
     private modalService: ModalService,
@@ -149,7 +152,10 @@ export class ProfileComponent implements OnInit {
     const labels: Record<string, string> = {
       patient: 'Paciente',
       professional: 'Profissional',
-      admin: 'Administrador'
+      admin: 'Administrador',
+      PATIENT: 'Paciente',
+      PROFESSIONAL: 'Profissional',
+      ADMIN: 'Administrador'
     };
     return labels[role] || role;
   }
@@ -171,6 +177,47 @@ export class ProfileComponent implements OnInit {
 
   onChangePasswordModalClose(): void {
     this.isChangePasswordModalOpen = false;
+  }
+
+  onChangeEmail(): void {
+    this.isEditModalOpen = false;
+    this.isChangeEmailModalOpen = true;
+  }
+
+  onChangeEmailModalClose(): void {
+    this.isChangeEmailModalOpen = false;
+  }
+
+  onEmailChangeRequested(newEmail: string): void {
+    if (!this.user) return;
+
+    this.isRequestingEmailChange = true;
+
+    this.authService.requestEmailChange(newEmail).subscribe({
+      next: (response) => {
+        this.isRequestingEmailChange = false;
+        this.isChangeEmailModalOpen = false;
+        this.cdr.detectChanges();
+        
+        setTimeout(() => {
+          this.modalService.alert({
+            title: 'Confirmação Enviada',
+            message: response.message || `Um e-mail de confirmação foi enviado para ${newEmail}. Por favor, verifique sua caixa de entrada e clique no link para confirmar a alteração.`,
+            variant: 'success'
+          });
+        }, 100);
+      },
+      error: (error) => {
+        this.isRequestingEmailChange = false;
+        console.error('Erro ao solicitar mudança de email:', error);
+        
+        this.modalService.alert({
+          title: 'Erro',
+          message: error.error?.message || 'Não foi possível solicitar a mudança de e-mail. Tente novamente.',
+          variant: 'danger'
+        });
+      }
+    });
   }
 
   onPasswordChanged(data: { currentPassword: string; newPassword: string }): void {

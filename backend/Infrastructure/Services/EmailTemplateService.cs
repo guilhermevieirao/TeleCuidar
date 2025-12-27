@@ -658,4 +658,137 @@ Se você não esperava este convite, pode ignorar este e-mail.
 Este e-mail foi enviado automaticamente pelo sistema TeleCuidar.
 ";
     }
+
+    /// <summary>
+    /// Gera o template HTML para confirmação de mudança de email
+    /// </summary>
+    public static string GenerateEmailChangeVerificationHtml(
+        string userName,
+        string verificationToken,
+        string frontendUrl = "http://localhost:4200")
+    {
+        var verificationLink = $"{frontendUrl}/auth/verify-email-change?token={verificationToken}";
+
+        return $@"
+<!DOCTYPE html>
+<html lang=""pt-BR"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Confirme sua Mudança de E-mail - TeleCuidar</title>
+</head>
+<body style=""margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6;"">
+    <table role=""presentation"" style=""width: 100%; border-collapse: collapse;"">
+        <tr>
+            <td style=""padding: 40px 20px;"">
+                <table role=""presentation"" style=""max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;"">
+                    <!-- Header -->
+                    <tr>
+                        <td style=""background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); padding: 30px; text-align: center;"">
+                            <h1 style=""margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;"">
+                                ✉️ TeleCuidar
+                            </h1>
+                            <p style=""margin: 10px 0 0 0; color: #e0f2fe; font-size: 14px;"">
+                                Confirmação de Mudança de E-mail
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Greeting -->
+                    <tr>
+                        <td style=""padding: 30px 30px 0 30px;"">
+                            <p style=""margin: 0; color: #374151; font-size: 16px;"">Olá, <strong>{userName}</strong>!</p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style=""padding: 20px 30px;"">
+                            <p style=""margin: 0 0 20px 0; color: #4b5563; font-size: 15px; line-height: 1.6;"">
+                                Você solicitou a mudança do e-mail da sua conta TeleCuidar para este endereço. Para confirmar essa alteração, clique no botão abaixo.
+                            </p>
+                            <p style=""margin: 0 0 20px 0; color: #4b5563; font-size: 15px; line-height: 1.6;"">
+                                <strong>⚠️ Importante:</strong> Este link expira em <strong>24 horas</strong>.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Button -->
+                    <tr>
+                        <td style=""padding: 0 30px 30px 30px; text-align: center;"">
+                            <a href=""{verificationLink}"" style=""display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);"">
+                                ✓ Confirmar Novo E-mail
+                            </a>
+                            <p style=""margin: 15px 0 0 0; color: #9ca3af; font-size: 13px;"">
+                                Ou copie este link: <br/>
+                                <a href=""{verificationLink}"" style=""color: #0ea5e9; text-decoration: underline; word-break: break-all;"">{verificationLink}</a>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Warning Box -->
+                    <tr>
+                        <td style=""padding: 20px 30px; background-color: #fef3c7; border-left: 4px solid #f59e0b;"">
+                            <p style=""margin: 0; color: #92400e; font-size: 13px;"">
+                                <strong>⚠️ Atenção:</strong> Se você não solicitou essa mudança de e-mail, ignore este e-mail e sua conta permanecerá inalterada.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style=""padding: 20px 30px; background-color: #f9fafb; border-top: 1px solid #e5e7eb;"">
+                            <table role=""presentation"" style=""width: 100%; border-collapse: collapse;"">
+                                <tr>
+                                    <td style=""text-align: center;"">
+                                        <p style=""margin: 0 0 10px 0; color: #6b7280; font-size: 13px;"">
+                                            Este e-mail foi enviado automaticamente pelo sistema TeleCuidar.
+                                        </p>
+                                        <p style=""margin: 0; color: #9ca3af; font-size: 12px;"">
+                                            Data/Hora: {DateTime.UtcNow.ToLocalTime():dd/MM/yyyy HH:mm:ss}
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>";
+    }
+
+    /// <summary>
+    /// Gera a versão em texto plano para confirmação de mudança de email
+    /// </summary>
+    public static string GenerateEmailChangeVerificationPlainText(
+        string userName,
+        string verificationToken,
+        string frontendUrl = "http://localhost:4200")
+    {
+        var verificationLink = $"{frontendUrl}/auth/verify-email-change?token={verificationToken}";
+
+        return $@"
+TeleCuidar - Confirmação de Mudança de E-mail
+=============================================
+
+Olá, {userName}!
+
+Você solicitou a mudança do e-mail da sua conta TeleCuidar para este endereço.
+
+Para confirmar essa alteração, acesse o link abaixo:
+{verificationLink}
+
+Este link expira em 24 horas.
+
+---
+Se você não solicitou essa mudança, ignore este e-mail e sua conta permanecerá inalterada.
+
+Data/Hora: {DateTime.UtcNow.ToLocalTime():dd/MM/yyyy HH:mm:ss}
+
+Este e-mail foi enviado automaticamente pelo sistema TeleCuidar.
+";
+    }
 }

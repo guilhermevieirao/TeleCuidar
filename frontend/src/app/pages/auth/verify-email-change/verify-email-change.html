@@ -1,0 +1,104 @@
+<div class="auth-page">
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-card__header">
+        <app-logo size="lg" />
+        <h1 class="auth-card__title">
+          @if (isLoading) {
+            Verificando Alteração...
+          } @else if (emailChanged) {
+            E-mail Alterado!
+          } @else {
+            Verificação Falhou
+          }
+        </h1>
+        <p class="auth-card__subtitle">
+          @if (isLoading) {
+            Aguarde enquanto confirmamos a mudança de e-mail
+          } @else if (emailChanged) {
+            Seu novo e-mail foi confirmado
+          } @else {
+            Não foi possível alterar seu e-mail
+          }
+        </p>
+      </div>
+
+      @if (isLoading) {
+        <div class="auth-loading">
+          <div class="auth-loading__spinner"></div>
+          <p class="auth-loading__text">Confirmando alteração de e-mail...</p>
+        </div>
+      }
+
+      @if (errorMessage && !isLoading) {
+        <div class="auth-alert auth-alert--error">
+          <app-icon name="alert-circle" [size]="20" />
+          <span>{{ errorMessage }}</span>
+        </div>
+      }
+
+      @if (successMessage && !isLoading) {
+        <div class="auth-alert auth-alert--success">
+          <app-icon name="check-circle" [size]="20" />
+          <span>{{ successMessage }}</span>
+        </div>
+      }
+
+      @if (emailChanged && !isLoading) {
+        <div class="auth-success">
+          <div class="auth-success__icon">
+            <app-icon name="check-circle" [size]="64" color="var(--green-600)" />
+          </div>
+          <p class="auth-success__text">
+            Seu e-mail foi alterado com sucesso para <strong>{{ newEmail }}</strong>!
+            Você será redirecionado em instantes.
+          </p>
+          <app-button
+            type="button"
+            variant="primary"
+            size="lg"
+            [fullWidth]="true"
+            (click)="goToProfile()"
+          >
+            <app-icon name="user" [size]="18" />
+            Ir para o Perfil
+          </app-button>
+        </div>
+      }
+
+      @if (verificationFailed && !isLoading) {
+        <div class="auth-error">
+          <div class="auth-error__icon">
+            <app-icon name="x-circle" [size]="64" color="var(--red-600)" />
+          </div>
+          <p class="auth-error__text">
+            O link de confirmação é inválido, expirou ou o e-mail já está em uso por outra conta.
+          </p>
+          <p class="auth-error__hint">
+            Se você ainda deseja alterar seu e-mail, acesse seu perfil e solicite uma nova alteração.
+          </p>
+          <app-button
+            type="button"
+            variant="primary"
+            size="lg"
+            [fullWidth]="true"
+            (click)="goToProfile()"
+          >
+            <app-icon name="user" [size]="18" />
+            Ir para o Perfil
+          </app-button>
+          <div class="auth-footer">
+            <button type="button" class="auth-footer__link-button" (click)="goToLogin()">
+              <app-icon name="arrow-left" [size]="16" />
+              <span>Voltar para o login</span>
+            </button>
+            <button type="button" class="auth-footer__back" (click)="goToHome()">
+              <app-icon name="home" [size]="16" />
+              <span>Voltar para o início</span>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>

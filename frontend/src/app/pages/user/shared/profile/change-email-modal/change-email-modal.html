@@ -1,0 +1,101 @@
+@if (isOpen) {
+  <div class="modal-backdrop" (click)="onBackdropClick()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal__header">
+        <div class="modal__header-content">
+          <app-icon name="mail" [size]="24" />
+          <h2 class="modal__title">Alterar E-mail</h2>
+        </div>
+        <button
+          type="button"
+          class="modal__close"
+          (click)="onCancel()"
+          [disabled]="isLoading"
+          aria-label="Fechar"
+        >
+          <app-icon name="close" [size]="24" />
+        </button>
+      </div>
+
+      <div class="modal__body">
+        <div class="modal__info">
+          <app-icon name="alert-circle" [size]="20" class="modal__info-icon" />
+          <p class="modal__info-text">
+            Para sua segurança, ao alterar seu e-mail, enviaremos um link de confirmação para o novo endereço. 
+            Você precisará clicar nesse link para concluir a alteração.
+          </p>
+        </div>
+
+        <form class="email-form">
+          <div class="email-form__field">
+            <label for="current-email" class="email-form__label">E-mail atual</label>
+            <input
+              id="current-email"
+              type="email"
+              class="email-form__input email-form__input--readonly"
+              [value]="currentEmail"
+              readonly
+              disabled
+            />
+          </div>
+
+          <div class="email-form__field">
+            <label for="new-email" class="email-form__label">Novo e-mail</label>
+            <input
+              id="new-email"
+              type="email"
+              class="email-form__input"
+              [(ngModel)]="newEmail"
+              name="newEmail"
+              placeholder="Digite o novo e-mail"
+              [class.email-form__input--error]="getEmailError()"
+              [disabled]="isLoading"
+              appEmailValidator
+              required
+            />
+            @if (getEmailError()) {
+              <span class="email-form__error">{{ getEmailError() }}</span>
+            }
+          </div>
+
+          <div class="email-form__field">
+            <label for="confirm-email" class="email-form__label">Confirmar novo e-mail</label>
+            <input
+              id="confirm-email"
+              type="email"
+              class="email-form__input"
+              [(ngModel)]="confirmEmail"
+              name="confirmEmail"
+              placeholder="Confirme o novo e-mail"
+              [class.email-form__input--error]="getConfirmError()"
+              [disabled]="isLoading"
+              required
+            />
+            @if (getConfirmError()) {
+              <span class="email-form__error">{{ getConfirmError() }}</span>
+            }
+          </div>
+        </form>
+      </div>
+
+      <div class="modal__footer">
+        <app-button
+          [variant]="'outline'"
+          (click)="onCancel()"
+          [disabled]="isLoading"
+        >
+          Cancelar
+        </app-button>
+        <app-button
+          [variant]="'primary'"
+          (click)="onSave()"
+          [disabled]="!isFormValid() || isLoading"
+          [loading]="isLoading"
+        >
+          <app-icon name="mail" [size]="18" />
+          Enviar Confirmação
+        </app-button>
+      </div>
+    </div>
+  </div>
+}

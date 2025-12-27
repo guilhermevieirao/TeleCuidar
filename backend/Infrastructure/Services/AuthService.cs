@@ -399,4 +399,139 @@ public class AuthService : IAuthService
         return !await _context.Users.AnyAsync(u => u.Phone != null && 
             u.Phone.Replace("(", "").Replace(")", "").Replace("-", "").Replace(" ", "") == cleanPhone);
     }
+
+    public async Task<bool> RequestEmailChangeAsync(Guid userId, string newEmail)
+    {
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null)
+        {
+            _logger.LogWarning("[RequestEmailChange] ❌ Usuário não encontrado: {userId}", userId);
+            return false;
+        }
+
+        // Verificar se o email já está em uso
+        if (await _context.Users.AnyAsync(u => u.Email == newEmail && u.Id != userId))
+        {
+            _logger.LogWarning("[RequestEmailChange] ❌ Email já em uso: {email}", newEmail);
+            throw new InvalidOperationException("Este e-mail já está em uso por outra conta.");
+        }
+
+        // Verificar se já existe uma mudança pendente para este email
+        if (await _context.Users.AnyAsync(u => u.PendingEmail == newEmail && u.Id != userId))
+        {
+            _logger.LogWarning("[RequestEmailChange] ❌ Email já pendente para outro usuário: {email}", newEmail);
+            throw new InvalidOperationException("Este e-mail já está em processo de verificação por outra conta.");
+        }
+
+        // Gerar token de verificação
+        user.PendingEmail = newEmail;
+        user.PendingEmailToken = Guid.NewGuid().ToString();
+        user.PendingEmailTokenExpiry = DateTime.UtcNow.AddHours(24);
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        try
+        {
+            // Enviar email de verificação para o NOVO email
+            var userName = $"{user.Name} {user.LastName}".Trim();
+            var htmlBody = EmailTemplateService.GenerateEmailChangeVerificationHtml(userName, user.PendingEmailToken, _frontendUrl);
+            var textBody = EmailTemplateService.GenerateEmailChangeVerificationPlainText(userName, user.PendingEmailToken, _frontendUrl);
+
+            await _emailService.SendEmailAsync(
+                newEmail,
+                userName,
+                "Confirmação de Mudança de E-mail - TeleCuidar",
+                htmlBody,
+                textBody
+            );
+
+            _logger.LogInformation("[RequestEmailChange] ✓ Email de verificação enviado para {newEmail}", newEmail);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[RequestEmailChange] ❌ Erro ao enviar email para {newEmail}", newEmail);
+            // Reverter mudanças
+            user.PendingEmail = null;
+            user.PendingEmailToken = null;
+            user.PendingEmailTokenExpiry = null;
+            await _context.SaveChangesAsync();
+            throw;
+        }
+    }
+
+    public async Task<User?> VerifyEmailChangeAsync(string token)
+    {
+        _logger.LogInformation("[VerifyEmailChange] Token recebido: {token}", token ?? "NULL");
+
+        var user = await _context.Users
+            .Include(u => u.PatientProfile)
+            .Include(u => u.ProfessionalProfile)
+            .FirstOrDefaultAsync(u => u.PendingEmailToken == token);
+
+        if (user == null)
+        {
+            _logger.LogWarning("[VerifyEmailChange] ❌ Usuário não encontrado com token: {token}", token);
+            return null;
+        }
+
+        // Verificar se token expirou
+        if (user.PendingEmailTokenExpiry == null || user.PendingEmailTokenExpiry < DateTime.UtcNow)
+        {
+            _logger.LogWarning("[VerifyEmailChange] ❌ Token expirado para {email}", user.Email);
+            return null;
+        }
+
+        // Verificar se o novo email ainda está disponível
+        if (await _context.Users.AnyAsync(u => u.Email == user.PendingEmail && u.Id != user.Id))
+        {
+            _logger.LogWarning("[VerifyEmailChange] ❌ Email não mais disponível: {email}", user.PendingEmail);
+            // Limpar dados pendentes
+            user.PendingEmail = null;
+            user.PendingEmailToken = null;
+            user.PendingEmailTokenExpiry = null;
+            await _context.SaveChangesAsync();
+            return null;
+        }
+
+        var oldEmail = user.Email;
+        
+        // Atualizar email
+        user.Email = user.PendingEmail!;
+        user.PendingEmail = null;
+        user.PendingEmailToken = null;
+        user.PendingEmailTokenExpiry = null;
+        user.EmailVerified = true; // O novo email já está verificado
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("[VerifyEmailChange] ✓ Email alterado de {oldEmail} para {newEmail}", oldEmail, user.Email);
+        return user;
+    }
+
+    public async Task<bool> CancelEmailChangeAsync(Guid userId)
+    {
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrEmpty(user.PendingEmail))
+        {
+            return true; // Não há mudança pendente
+        }
+
+        user.PendingEmail = null;
+        user.PendingEmailToken = null;
+        user.PendingEmailTokenExpiry = null;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("[CancelEmailChange] ✓ Mudança de email cancelada para usuário {userId}", userId);
+        return true;
+    }
 }

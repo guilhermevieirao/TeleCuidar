@@ -56,31 +56,46 @@
           </div>
 
           <div class="user-form__field">
-            <label for="profile-email" class="user-form__label">E-mail</label>
-            <input
-              id="profile-email"
-              type="email"
-              class="user-form__input"
-              [(ngModel)]="editedUser.email"
-              name="email"
-              placeholder="Digite o e-mail"
-              appEmailValidator
-              required
-            />
+            <label for="profile-email" class="user-form__label">
+              E-mail
+              <span class="user-form__label-hint">(não editável)</span>
+            </label>
+            <div class="user-form__readonly-field">
+              <input
+                id="profile-email"
+                type="email"
+                class="user-form__input user-form__input--readonly"
+                [value]="editedUser.email"
+                name="email"
+                readonly
+                disabled
+              />
+              <app-button
+                [variant]="'outline'"
+                [size]="'sm'"
+                (click)="onChangeEmail()"
+                class="user-form__change-btn"
+              >
+                <app-icon name="edit" [size]="14" />
+                Alterar
+              </app-button>
+            </div>
           </div>
 
           <div class="user-form__row">
             <div class="user-form__field">
-              <label for="profile-cpf" class="user-form__label">CPF</label>
+              <label for="profile-cpf" class="user-form__label">
+                CPF
+                <span class="user-form__label-hint">(não editável)</span>
+              </label>
               <input
                 id="profile-cpf"
                 type="text"
-                class="user-form__input"
-                [(ngModel)]="editedUser.cpf"
+                class="user-form__input user-form__input--readonly"
+                [value]="editedUser.cpf"
                 name="cpf"
-                placeholder="000.000.000-00"
-                appCpfMask
-                required
+                readonly
+                disabled
               />
             </div>
 

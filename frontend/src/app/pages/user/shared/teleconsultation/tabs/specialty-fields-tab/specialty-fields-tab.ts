@@ -57,7 +57,18 @@ export class SpecialtyFieldsTabComponent implements OnInit, OnDestroy {
     this.specialtyFieldsForm.valueChanges
       .pipe(
         takeUntil(this.destroy$),
-        debounceTime(2000)
+        debounceTime(300) // 300ms para cache local
+      )
+      .subscribe(() => {
+        if (this.appointmentId) {
+          this.saveToLocalCache();
+        }
+      });
+    
+    this.specialtyFieldsForm.valueChanges
+      .pipe(
+        takeUntil(this.destroy$),
+        debounceTime(2000) // 2s para salvar no backend
       )
       .subscribe(() => {
         if (this.specialtyFieldsForm.dirty) {
@@ -130,15 +141,55 @@ export class SpecialtyFieldsTabComponent implements OnInit, OnDestroy {
   }
 
   loadSavedData() {
+    // Primeiro verificar se há dados no cache local (mais recentes)
+    const cachedData = this.loadFromLocalCache();
+    if (cachedData) {
+      this.specialtyFieldsForm.patchValue(cachedData, { emitEvent: false });
+      this.specialtyFieldsForm.markAsPristine();
+      return;
+    }
+    
     // Carregar dados salvos do backend
     if (this.appointment?.specialtyFieldsJson) {
       try {
         const savedData = JSON.parse(this.appointment.specialtyFieldsJson);
-        this.specialtyFieldsForm.patchValue(savedData);
+        this.specialtyFieldsForm.patchValue(savedData, { emitEvent: false });
         this.specialtyFieldsForm.markAsPristine();
       } catch (error) {
         console.error('Erro ao carregar dados salvos:', error);
       }
+    }
+  }
+
+  private getCacheKey(): string {
+    return `specialtyFields_${this.appointmentId}`;
+  }
+
+  private saveToLocalCache(): void {
+    if (!this.appointmentId) return;
+    try {
+      sessionStorage.setItem(this.getCacheKey(), JSON.stringify(this.specialtyFieldsForm.value));
+    } catch (e) {
+      // Ignorar erros de sessionStorage
+    }
+  }
+
+  private loadFromLocalCache(): any {
+    if (!this.appointmentId) return null;
+    try {
+      const cached = sessionStorage.getItem(this.getCacheKey());
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  private clearLocalCache(): void {
+    if (!this.appointmentId) return;
+    try {
+      sessionStorage.removeItem(this.getCacheKey());
+    } catch (e) {
+      // Ignorar erros de sessionStorage
     }
   }
 
@@ -156,6 +207,8 @@ export class SpecialtyFieldsTabComponent implements OnInit, OnDestroy {
           this.isSaving = false;
           this.lastSaved = new Date();
           this.specialtyFieldsForm.markAsPristine();
+          // Limpar cache após salvar com sucesso
+          this.clearLocalCache();
           this.cdr.detectChanges();
         },
         error: (error) => {

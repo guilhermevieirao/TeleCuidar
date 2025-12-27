@@ -5,6 +5,7 @@ import { RegisterComponent } from '@pages/auth/register/register';
 import { ForgotPasswordComponent } from '@pages/auth/forgot-password/forgot-password';
 import { ResetPasswordComponent } from '@pages/auth/reset-password/reset-password';
 import { VerifyEmailComponent } from '@pages/auth/verify-email/verify-email';
+import { VerifyEmailChangeComponent } from '@pages/auth/verify-email-change/verify-email-change';
 
 // Shared user components
 import { UserLayoutComponent } from '@pages/user/shared/user-layout/user-layout';
@@ -56,6 +57,7 @@ export const routes: Routes = [
       { path: 'forgot-password', component: ForgotPasswordComponent },
       { path: 'reset-password', component: ResetPasswordComponent },
       { path: 'verify-email', component: VerifyEmailComponent },
+      { path: 'verify-email-change', component: VerifyEmailChangeComponent },
       { path: '', redirectTo: '/entrar', pathMatch: 'full' }
     ]
   },

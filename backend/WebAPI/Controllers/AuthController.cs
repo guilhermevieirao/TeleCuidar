@@ -382,4 +382,133 @@ public class AuthController : ControllerBase
             return StatusCode(500, new { message = "An error occurred", error = ex.Message });
         }
     }
+
+    [HttpPost("request-email-change")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<IActionResult> RequestEmailChange([FromBody] RequestEmailChangeDto request)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(request?.NewEmail))
+            {
+                return BadRequest(new { message = "Novo e-mail é obrigatório" });
+            }
+
+            // Extrair userId do token JWT
+            var userIdClaim = User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub) 
+                ?? User.FindFirst("sub") 
+                ?? User.FindFirst("userId")
+                ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                return Unauthorized(new { message = "Token de usuário inválido ou ausente" });
+            }
+
+            var result = await _authService.RequestEmailChangeAsync(userId, request.NewEmail);
+
+            if (!result)
+            {
+                return BadRequest(new { message = "Falha ao solicitar mudança de e-mail" });
+            }
+
+            // Audit log
+            await _auditLogService.CreateAuditLogAsync(
+                userId,
+                "update",
+                "User",
+                userId.ToString(),
+                null,
+                HttpContextExtensions.SerializeToJson(new { Action = "Email Change Requested", NewEmail = request.NewEmail }),
+                HttpContext.GetIpAddress(),
+                HttpContext.GetUserAgent()
+            );
+
+            return Ok(new { message = "E-mail de confirmação enviado para o novo endereço. Por favor, verifique sua caixa de entrada." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao processar solicitação", error = ex.Message });
+        }
+    }
+
+    [HttpPost("verify-email-change")]
+    public async Task<IActionResult> VerifyEmailChange([FromBody] VerifyEmailChangeRequestDto request)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(request?.Token))
+            {
+                return BadRequest(new { message = "Token é obrigatório" });
+            }
+
+            var user = await _authService.VerifyEmailChangeAsync(request.Token);
+
+            if (user == null)
+            {
+                return BadRequest(new { message = "Token inválido ou expirado" });
+            }
+
+            var userDto = await _userService.GetUserByIdAsync(user.Id);
+
+            return Ok(new
+            {
+                message = "E-mail alterado com sucesso",
+                user = userDto ?? new UserDto
+                {
+                    Id = user.Id,
+                    Email = user.Email,
+                    Name = user.Name,
+                    LastName = user.LastName,
+                    Cpf = user.Cpf,
+                    Phone = user.Phone,
+                    Avatar = user.Avatar,
+                    Role = user.Role.ToString(),
+                    EmailVerified = user.EmailVerified,
+                    CreatedAt = user.CreatedAt,
+                    UpdatedAt = user.UpdatedAt
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao verificar mudança de e-mail", error = ex.Message });
+        }
+    }
+
+    [HttpPost("cancel-email-change")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<IActionResult> CancelEmailChange()
+    {
+        try
+        {
+            // Extrair userId do token JWT
+            var userIdClaim = User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub) 
+                ?? User.FindFirst("sub") 
+                ?? User.FindFirst("userId")
+                ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                return Unauthorized(new { message = "Token de usuário inválido ou ausente" });
+            }
+
+            var result = await _authService.CancelEmailChangeAsync(userId);
+
+            if (!result)
+            {
+                return BadRequest(new { message = "Falha ao cancelar mudança de e-mail" });
+            }
+
+            return Ok(new { message = "Solicitação de mudança de e-mail cancelada" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Erro ao cancelar mudança de e-mail", error = ex.Message });
+        }
+    }
 }

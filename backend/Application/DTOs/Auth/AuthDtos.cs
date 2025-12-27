@@ -88,3 +88,13 @@ public class VerifyEmailRequestDto
 {
     public string Token { get; set; } = string.Empty;
 }
+
+public class RequestEmailChangeDto
+{
+    public string NewEmail { get; set; } = string.Empty;
+}
+
+public class VerifyEmailChangeRequestDto
+{
+    public string Token { get; set; } = string.Empty;
+}

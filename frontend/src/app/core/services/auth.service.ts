@@ -147,6 +147,31 @@ export class AuthService {
     return this.http.post(AUTH_ENDPOINTS.RESEND_VERIFICATION, { email });
   }
 
+  // Request Email Change
+  requestEmailChange(newEmail: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(AUTH_ENDPOINTS.REQUEST_EMAIL_CHANGE, { newEmail });
+  }
+
+  // Verify Email Change
+  verifyEmailChange(token: string): Observable<{ message: string; user: User }> {
+    return this.http.post<{ message: string; user: User }>(AUTH_ENDPOINTS.VERIFY_EMAIL_CHANGE, { token }).pipe(
+      tap(response => {
+        if (response.user) {
+          this.currentUser.set(response.user);
+          // Atualizar também no storage
+          if (isPlatformBrowser(this.platformId)) {
+            localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.user));
+          }
+        }
+      })
+    );
+  }
+
+  // Cancel Email Change
+  cancelEmailChange(): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(AUTH_ENDPOINTS.CANCEL_EMAIL_CHANGE, {});
+  }
+
   // Google Login (placeholder)
   loginWithGoogle(): void {
     if (isPlatformBrowser(this.platformId)) {

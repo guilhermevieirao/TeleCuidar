@@ -29,6 +29,11 @@ public class User : BaseEntity
     public string? EmailVerificationToken { get; set; }
     public DateTime? EmailVerificationTokenExpiry { get; set; }
     
+    // Mudança de email pendente
+    public string? PendingEmail { get; set; }
+    public string? PendingEmailToken { get; set; }
+    public DateTime? PendingEmailTokenExpiry { get; set; }
+    
     // Reset de senha
     public string? PasswordResetToken { get; set; }
     public DateTime? PasswordResetTokenExpiry { get; set; }

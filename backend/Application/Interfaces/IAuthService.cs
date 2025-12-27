@@ -16,4 +16,9 @@ public interface IAuthService
     Task<bool> IsEmailAvailableAsync(string email);
     Task<bool> IsCpfAvailableAsync(string cpf);
     Task<bool> IsPhoneAvailableAsync(string phone);
+    
+    // Mudança de email
+    Task<bool> RequestEmailChangeAsync(Guid userId, string newEmail);
+    Task<User?> VerifyEmailChangeAsync(string token);
+    Task<bool> CancelEmailChangeAsync(Guid userId);
 }
