@@ -201,6 +201,7 @@ export class SchedulesComponent implements OnInit, OnDestroy {
   onScheduleCreated(schedule: Schedule): void {
     this.isCreateModalOpen = false;
     this.currentPage = 1;
+    this.cdr.detectChanges();
     setTimeout(() => {
       this.loadSchedules();
     });
@@ -229,6 +230,7 @@ export class SchedulesComponent implements OnInit, OnDestroy {
 
   onScheduleUpdated(schedule: Schedule): void {
     this.isCreateModalOpen = false;
+    this.cdr.detectChanges();
     setTimeout(() => {
       this.loadSchedules();
     });

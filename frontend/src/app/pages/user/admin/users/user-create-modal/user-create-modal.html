@@ -254,6 +254,7 @@
                   type="number"
                   class="user-form__input"
                   [(ngModel)]="linkValidity"
+                  [ngModelOptions]="{standalone: true}"
                   name="linkValidity"
                   min="1"
                   max="365"
