@@ -19,6 +19,8 @@ import { IotTabComponent } from '@pages/user/shared/teleconsultation/tabs/iot-ta
 import { AITabComponent } from '@pages/user/shared/teleconsultation/tabs/ai-tab/ai-tab';
 import { ReceitaTabComponent } from '@pages/user/shared/teleconsultation/tabs/receita-tab/receita-tab';
 import { AtestadoTabComponent } from '@pages/user/shared/teleconsultation/tabs/atestado-tab/atestado-tab';
+import { ExameTabComponent } from '@pages/user/shared/teleconsultation/tabs/exame-tab/exame-tab';
+import { LaudoTabComponent } from '@pages/user/shared/teleconsultation/tabs/laudo-tab/laudo-tab';
 import { ReferralTabComponent } from '@pages/user/shared/teleconsultation/tabs/referral-tab/referral-tab';
 import { ReturnTabComponent } from '@pages/user/shared/teleconsultation/tabs/return-tab/return-tab';
 import { getAllDetailsTabs, TabConfig } from '@pages/user/shared/teleconsultation/tabs/tab-config';
@@ -71,6 +73,8 @@ import { Subject, takeUntil } from 'rxjs';
     AITabComponent,
     ReceitaTabComponent,
     AtestadoTabComponent,
+    ExameTabComponent,
+    LaudoTabComponent,
     ReferralTabComponent,
     ReturnTabComponent
   ],

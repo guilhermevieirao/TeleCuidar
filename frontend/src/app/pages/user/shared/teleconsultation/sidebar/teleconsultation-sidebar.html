@@ -148,6 +148,22 @@
       </app-atestado-tab>
     </div>
 
+    <!-- Exame -->
+    <div class="tab-content" *ngIf="activeTab === 'Exame'" style="height: 100%">
+      <app-exame-tab
+        [appointmentId]="appointmentId"
+        [userrole]="userrole">
+      </app-exame-tab>
+    </div>
+
+    <!-- Laudo -->
+    <div class="tab-content" *ngIf="activeTab === 'Laudo'" style="height: 100%">
+      <app-laudo-tab
+        [appointmentId]="appointmentId"
+        [userrole]="userrole">
+      </app-laudo-tab>
+    </div>
+
     <!-- Retorno -->
     <div class="tab-content" *ngIf="activeTab === 'Retorno'" style="height: 100%">
       <app-return-tab

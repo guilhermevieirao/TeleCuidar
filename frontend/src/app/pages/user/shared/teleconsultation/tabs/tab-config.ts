@@ -141,13 +141,31 @@ export const TELECONSULTATION_TABS: TabConfig[] = [
     order: 10
   },
   {
+    id: 'exame',
+    label: 'Exame',
+    icon: 'file',
+    roles: ['PROFESSIONAL', 'ADMIN'],
+    showInTeleconsultation: true,
+    showInDetails: true, // Aparece automaticamente nos detalhes
+    order: 11
+  },
+  {
+    id: 'laudo',
+    label: 'Laudo',
+    icon: 'file',
+    roles: ['PROFESSIONAL', 'ADMIN'],
+    showInTeleconsultation: true,
+    showInDetails: true, // Aparece automaticamente nos detalhes
+    order: 12
+  },
+  {
     id: 'ai',
     label: 'IA',
     icon: 'activity',
     roles: ['PROFESSIONAL', 'ADMIN'],
     showInTeleconsultation: true,
     showInDetails: true, // Aparece automaticamente nos detalhes
-    order: 11
+    order: 13
   },
   {
     id: 'cns',
@@ -156,7 +174,7 @@ export const TELECONSULTATION_TABS: TabConfig[] = [
     roles: ['PROFESSIONAL', 'ADMIN'],
     showInTeleconsultation: true,
     showInDetails: false, // CNS NÃO aparece nos detalhes (apenas na teleconsulta)
-    order: 12
+    order: 14
   },
   {
     id: 'return',
@@ -165,7 +183,7 @@ export const TELECONSULTATION_TABS: TabConfig[] = [
     roles: ['PROFESSIONAL', 'ADMIN'],
     showInTeleconsultation: true,
     showInDetails: true, // Aparece automaticamente nos detalhes
-    order: 13
+    order: 15
   },
   {
     id: 'referral',
@@ -174,7 +192,7 @@ export const TELECONSULTATION_TABS: TabConfig[] = [
     roles: ['PROFESSIONAL', 'ADMIN'],
     showInTeleconsultation: true,
     showInDetails: true, // Aparece automaticamente nos detalhes
-    order: 14
+    order: 16
   },
   {
     id: 'conclusion',
@@ -183,7 +201,7 @@ export const TELECONSULTATION_TABS: TabConfig[] = [
     roles: ['PROFESSIONAL', 'ADMIN'],
     showInTeleconsultation: true,
     showInDetails: true, // Aparece automaticamente nos detalhes
-    order: 15
+    order: 17
   }
 ];
 
@@ -227,6 +245,8 @@ export const TAB_ID_TO_LEGACY_NAME: Record<string, string> = {
   'soap': 'SOAP',
   'receita': 'Receita',
   'atestado': 'Atestado',
+  'exame': 'Exame',
+  'laudo': 'Laudo',
   'ai': 'IA',
   'cns': 'CNS',
   'return': 'Retorno',

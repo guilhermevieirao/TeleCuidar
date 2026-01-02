@@ -1,0 +1,308 @@
+<div class="laudo-tab">
+  <!-- Header com botão de adicionar -->
+  <div class="tab-header">
+    <div class="header-title">
+      <app-icon name="file" [size]="20"></app-icon>
+      <h3>Laudos Médicos</h3>
+    </div>
+    @if (canEdit() && !readonly && !isFormOpen()) {
+      <app-button
+        variant="primary"
+        size="sm"
+        (click)="openNewForm()">
+        <app-icon name="plus" [size]="16"></app-icon>
+        Novo Laudo
+      </app-button>
+    }
+  </div>
+
+  <!-- Mensagem de erro -->
+  @if (error()) {
+    <div class="error-message">
+      <app-icon name="alert-circle" [size]="16"></app-icon>
+      <span>{{ error() }}</span>
+      <button class="close-error" (click)="error.set(null)">×</button>
+    </div>
+  }
+
+  <!-- Loading -->
+  @if (isLoading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <span>Carregando laudos...</span>
+    </div>
+  }
+
+  <!-- Formulário de criação/edição -->
+  @if (isFormOpen() && canEdit() && !readonly) {
+    <div class="report-form">
+      <div class="form-header">
+        <h4>{{ editingId() ? 'Editar Laudo' : 'Novo Laudo' }}</h4>
+        <button class="close-btn" (click)="cancelForm()">
+          <app-icon name="close" [size]="18"></app-icon>
+        </button>
+      </div>
+
+      <div class="form-content">
+        <!-- Tipo e Título -->
+        <div class="form-row">
+          <div class="form-group half">
+            <label for="tipo">Tipo de Laudo *</label>
+            <select
+              id="tipo"
+              [value]="formData().tipo"
+              (change)="updateFormField('tipo', $any($event.target).value)">
+              @for (option of tipoOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group half">
+            <label for="titulo">Título do Laudo *</label>
+            <input
+              type="text"
+              id="titulo"
+              [value]="formData().titulo"
+              (input)="updateFormField('titulo', $any($event.target).value)"
+              placeholder="Ex: Laudo de Ecocardiograma"
+            />
+          </div>
+        </div>
+
+        <!-- Histórico Clínico -->
+        <div class="form-group">
+          <label for="historicoClinico">Histórico Clínico / Anamnese</label>
+          <textarea
+            id="historicoClinico"
+            [value]="formData().historicoClinico"
+            (input)="updateFormField('historicoClinico', $any($event.target).value)"
+            placeholder="Resumo do histórico clínico relevante..."
+            rows="3"></textarea>
+        </div>
+
+        <!-- Exame Físico -->
+        <div class="form-group">
+          <label for="exameFisico">Exame Físico / Achados</label>
+          <textarea
+            id="exameFisico"
+            [value]="formData().exameFisico"
+            (input)="updateFormField('exameFisico', $any($event.target).value)"
+            placeholder="Descrição dos achados do exame físico..."
+            rows="3"></textarea>
+        </div>
+
+        <!-- Exames Complementares -->
+        <div class="form-group">
+          <label for="examesComplementares">Exames Complementares</label>
+          <textarea
+            id="examesComplementares"
+            [value]="formData().examesComplementares"
+            (input)="updateFormField('examesComplementares', $any($event.target).value)"
+            placeholder="Resultados de exames complementares..."
+            rows="3"></textarea>
+        </div>
+
+        <!-- Hipótese Diagnóstica e CID -->
+        <div class="form-row">
+          <div class="form-group two-thirds">
+            <label for="hipoteseDiagnostica">Hipótese Diagnóstica</label>
+            <input
+              type="text"
+              id="hipoteseDiagnostica"
+              [value]="formData().hipoteseDiagnostica"
+              (input)="updateFormField('hipoteseDiagnostica', $any($event.target).value)"
+              placeholder="Hipótese diagnóstica"
+            />
+          </div>
+          <div class="form-group one-third">
+            <label for="cid">CID-10</label>
+            <input
+              type="text"
+              id="cid"
+              [value]="formData().cid"
+              (input)="updateFormField('cid', $any($event.target).value)"
+              placeholder="Ex: I10"
+            />
+          </div>
+        </div>
+
+        <!-- Conclusão -->
+        <div class="form-group">
+          <label for="conclusao">Conclusão *</label>
+          <textarea
+            id="conclusao"
+            [value]="formData().conclusao"
+            (input)="updateFormField('conclusao', $any($event.target).value)"
+            placeholder="Conclusão do laudo..."
+            rows="4"
+            required></textarea>
+        </div>
+
+        <!-- Recomendações -->
+        <div class="form-group">
+          <label for="recomendacoes">Recomendações / Conduta</label>
+          <textarea
+            id="recomendacoes"
+            [value]="formData().recomendacoes"
+            (input)="updateFormField('recomendacoes', $any($event.target).value)"
+            placeholder="Recomendações e conduta sugerida..."
+            rows="3"></textarea>
+        </div>
+
+        <!-- Observações -->
+        <div class="form-group">
+          <label for="observacoes">Observações</label>
+          <textarea
+            id="observacoes"
+            [value]="formData().observacoes"
+            (input)="updateFormField('observacoes', $any($event.target).value)"
+            placeholder="Observações adicionais..."
+            rows="2"></textarea>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <app-button
+          variant="secondary"
+          size="sm"
+          (click)="cancelForm()"
+          [disabled]="isSaving()">
+          Cancelar
+        </app-button>
+        <app-button
+          variant="primary"
+          size="sm"
+          (click)="saveReport()"
+          [loading]="isSaving()"
+          [disabled]="isSaving()">
+          <app-icon name="check" [size]="16"></app-icon>
+          {{ editingId() ? 'Salvar Alterações' : 'Criar Laudo' }}
+        </app-button>
+      </div>
+    </div>
+  }
+
+  <!-- Lista de laudos -->
+  @if (!isLoading() && !isFormOpen()) {
+    @if (hasReports()) {
+      <div class="reports-list">
+        @for (report of reports(); track report.id) {
+          <div class="report-card" [class.signed]="report.isSigned">
+            <div class="report-header">
+              <div class="report-type">
+                <app-icon name="file" [size]="18"></app-icon>
+                <span>{{ report.titulo }}</span>
+                <span class="report-tipo-badge">{{ getTipoLabel(report.tipo) }}</span>
+              </div>
+              @if (report.isSigned) {
+                <span class="signed-badge">
+                  <app-icon name="check-circle" [size]="14"></app-icon>
+                  Assinado
+                </span>
+              }
+            </div>
+
+            <div class="report-content">
+              @if (report.hipoteseDiagnostica) {
+                <div class="report-detail">
+                  <strong>Diagnóstico:</strong> {{ report.hipoteseDiagnostica }}
+                  @if (report.cid) {
+                    <span class="cid-tag">CID: {{ report.cid }}</span>
+                  }
+                </div>
+              }
+              
+              <div class="report-conclusion">
+                <strong>Conclusão:</strong>
+                <p>{{ report.conclusao }}</p>
+              </div>
+
+              @if (report.observacoes) {
+                <p class="report-obs">
+                  <strong>Obs:</strong> {{ report.observacoes }}
+                </p>
+              }
+
+              @if (report.isSigned) {
+                <div class="signature-info">
+                  <app-icon name="shield" [size]="18"></app-icon>
+                  <div class="signature-details">
+                    <strong>Documento Assinado Digitalmente</strong>
+                    @if (report.certificateSubject) {
+                      <p>Certificado: {{ report.certificateSubject }}</p>
+                    }
+                    @if (report.signedAt) {
+                      <p>Data: {{ formatDateTime(report.signedAt) }}</p>
+                    }
+                    @if (report.documentHash) {
+                      <p class="hash">Hash: {{ report.documentHash }}</p>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+
+            <div class="report-footer">
+              <span class="report-date">
+                <app-icon name="calendar" [size]="14"></app-icon>
+                {{ formatDate(report.dataEmissao) }}
+              </span>
+
+              @if (canEdit() && !readonly) {
+                <div class="report-actions">
+                  @if (!report.isSigned) {
+                    <button class="action-btn edit" (click)="openEditForm(report)" title="Editar">
+                      <app-icon name="edit" [size]="16"></app-icon>
+                    </button>
+                    <button class="action-btn delete" (click)="deleteReport(report)" title="Excluir">
+                      <app-icon name="trash" [size]="16"></app-icon>
+                    </button>
+                    <button 
+                      class="action-btn sign" 
+                      type="button"
+                      (click)="openSignModal(report)" 
+                      title="Assinar Digitalmente">
+                      <app-icon name="shield" [size]="16"></app-icon>
+                    </button>
+                  }
+                  @if (report.isSigned) {
+                    <button 
+                      class="action-btn pdf signed" 
+                      (click)="downloadPdf(report)"
+                      title="Baixar PDF Assinado (validável em validar.iti.gov.br)">
+                      <app-icon name="download" [size]="16"></app-icon>
+                    </button>
+                  } @else {
+                    <button 
+                      class="action-btn pdf" 
+                      (click)="downloadPdf(report)" 
+                      title="Gerar PDF">
+                      <app-icon name="download" [size]="16"></app-icon>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="empty-state">
+        <app-icon name="file" [size]="48"></app-icon>
+        <h4>Nenhum laudo criado</h4>
+        <p>Clique em "Novo Laudo" para criar um laudo médico.</p>
+      </div>
+    }
+  }
+
+  <!-- Modal de assinatura digital -->
+  @if (selectedReportForSign()) {
+    <app-sign-document-modal
+      [isOpen]="isSignModalOpen()"
+      [documentType]="'report'"
+      [documentId]="selectedReportForSign()!.id"
+      (close)="closeSignModal()"
+      (signed)="onDocumentSigned($event)">
+    </app-sign-document-modal>
+  }
+</div>

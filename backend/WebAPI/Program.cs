@@ -73,6 +73,8 @@ builder.Services.AddScoped<Application.Interfaces.IInviteService, Infrastructure
 builder.Services.AddScoped<Application.Interfaces.IAIService, Infrastructure.Services.AIService>();
 builder.Services.AddScoped<Application.Interfaces.IPrescriptionService, Infrastructure.Services.PrescriptionService>();
 builder.Services.AddScoped<Application.Interfaces.IMedicalCertificateService, Infrastructure.Services.MedicalCertificateService>();
+builder.Services.AddScoped<Application.Interfaces.IExamRequestService, Infrastructure.Services.ExamRequestService>();
+builder.Services.AddScoped<Application.Interfaces.IMedicalReportService, Infrastructure.Services.MedicalReportService>();
 builder.Services.AddScoped<Application.Interfaces.IDigitalCertificateService, Infrastructure.Services.DigitalCertificateService>();
 builder.Services.AddSingleton<Application.Interfaces.IMedicamentoAnvisaService, Infrastructure.Services.MedicamentoAnvisaService>();
 

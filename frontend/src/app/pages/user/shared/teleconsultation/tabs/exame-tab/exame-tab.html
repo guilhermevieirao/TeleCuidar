@@ -1,0 +1,306 @@
+<div class="exame-container">
+  <!-- Loading State -->
+  @if (isLoading) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Carregando solicitações de exame...</p>
+    </div>
+  } @else {
+    <!-- Header -->
+    <div class="exame-header">
+      <div class="header-content">
+        <h3>
+          <app-icon name="activity" [size]="20" />
+          Solicitação de Exames
+        </h3>
+      </div>
+      
+      @if (canEdit && !showForm) {
+        <div class="header-actions">
+          <app-button 
+            variant="primary" 
+            size="sm"
+            (click)="startNewExam()">
+            <app-icon name="plus" [size]="16" />
+            Nova Solicitação
+          </app-button>
+        </div>
+      }
+    </div>
+
+    <!-- Formulário de Solicitação de Exame -->
+    @if (showForm) {
+      <div class="exam-form">
+        <h4>{{ editingExam ? 'Editar Solicitação' : 'Nova Solicitação de Exame' }}</h4>
+        
+        <form [formGroup]="examForm" (ngSubmit)="saveExam()">
+          <div class="form-row two-cols">
+            <div class="form-group">
+              <label for="nomeExame">Nome do Exame *</label>
+              <input 
+                type="text" 
+                id="nomeExame" 
+                formControlName="nomeExame"
+                placeholder="Ex: Hemograma completo, Raio-X de tórax..." 
+              />
+            </div>
+            <div class="form-group">
+              <label for="codigoExame">Código (TUSS/SIGTAP)</label>
+              <input 
+                type="text" 
+                id="codigoExame" 
+                formControlName="codigoExame"
+                placeholder="Código opcional" 
+              />
+            </div>
+          </div>
+
+          <div class="form-row two-cols">
+            <div class="form-group">
+              <label for="categoria">Categoria *</label>
+              <select id="categoria" formControlName="categoria">
+                @for (cat of categorias; track cat.value) {
+                  <option [value]="cat.value">{{ cat.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="prioridade">Prioridade *</label>
+              <select id="prioridade" formControlName="prioridade">
+                @for (prio of prioridades; track prio.value) {
+                  <option [value]="prio.value">{{ prio.label }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row two-cols">
+            <div class="form-group">
+              <label for="dataLimite">Data Limite para Realização</label>
+              <input type="date" id="dataLimite" formControlName="dataLimite" />
+            </div>
+            <div class="form-group">
+              <label for="cid">CID (opcional)</label>
+              <input type="text" id="cid" formControlName="cid" placeholder="Ex: J06.9" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="indicacaoClinica">Indicação Clínica / Justificativa *</label>
+              <textarea 
+                id="indicacaoClinica" 
+                formControlName="indicacaoClinica" 
+                rows="3"
+                placeholder="Descreva a indicação clínica para este exame..."></textarea>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="hipoteseDiagnostica">Hipótese Diagnóstica</label>
+              <input 
+                type="text" 
+                id="hipoteseDiagnostica" 
+                formControlName="hipoteseDiagnostica"
+                placeholder="Hipótese diagnóstica (opcional)" 
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="instrucoesPreparo">Instruções de Preparo</label>
+              <textarea 
+                id="instrucoesPreparo" 
+                formControlName="instrucoesPreparo" 
+                rows="2"
+                placeholder="Instruções de preparo para o paciente..."></textarea>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="observacoes">Observações (opcional)</label>
+              <textarea 
+                id="observacoes" 
+                formControlName="observacoes" 
+                rows="2"
+                placeholder="Observações adicionais..."></textarea>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <app-button 
+              variant="secondary" 
+              type="button"
+              (click)="cancelForm()">
+              Cancelar
+            </app-button>
+            <app-button 
+              variant="primary" 
+              type="submit"
+              [disabled]="examForm.invalid || isSaving">
+              {{ isSaving ? 'Salvando...' : 'Salvar Solicitação' }}
+            </app-button>
+          </div>
+        </form>
+      </div>
+    }
+
+    <!-- Lista de Solicitações de Exame -->
+    @if (!showForm) {
+      <div class="exams-list">
+        @if (exams.length === 0) {
+          <div class="empty-state">
+            <app-icon name="activity" [size]="48" />
+            <h4>Nenhum exame solicitado</h4>
+            <p>Clique em "Nova Solicitação" para criar uma solicitação de exame para esta consulta.</p>
+          </div>
+        } @else {
+          @for (exam of exams; track exam.id) {
+            <div class="exam-card" [class.signed]="exam.isSigned" [class.urgent]="exam.prioridade === 'urgente'">
+              <div class="exam-header">
+                <div class="exam-title">
+                  <app-icon name="activity" [size]="18" />
+                  <span>{{ exam.nomeExame }}</span>
+                  @if (exam.codigoExame) {
+                    <span class="exam-code">({{ exam.codigoExame }})</span>
+                  }
+                </div>
+                <div class="exam-badges">
+                  @if (exam.prioridade === 'urgente') {
+                    <span class="urgent-badge">
+                      <app-icon name="alert-circle" [size]="14" />
+                      Urgente
+                    </span>
+                  }
+                  @if (exam.isSigned) {
+                    <span class="signed-badge">
+                      <app-icon name="check-circle" [size]="14" />
+                      Assinado
+                    </span>
+                  }
+                </div>
+              </div>
+              
+              <div class="exam-content">
+                <div class="exam-meta">
+                  <span class="meta-item">
+                    <strong>Categoria:</strong> {{ getCategoriaLabel(exam.categoria) }}
+                  </span>
+                  @if (exam.dataLimite) {
+                    <span class="meta-item">
+                      <strong>Realizar até:</strong> {{ formatDate(exam.dataLimite) }}
+                    </span>
+                  }
+                </div>
+
+                <div class="exam-indication">
+                  <strong>Indicação Clínica:</strong>
+                  <p>{{ exam.indicacaoClinica }}</p>
+                </div>
+                
+                @if (exam.hipoteseDiagnostica) {
+                  <div class="exam-detail">
+                    <strong>Hipótese Diagnóstica:</strong> {{ exam.hipoteseDiagnostica }}
+                  </div>
+                }
+
+                @if (exam.cid) {
+                  <div class="exam-detail">
+                    <strong>CID:</strong> {{ exam.cid }}
+                  </div>
+                }
+
+                @if (exam.instrucoesPreparo) {
+                  <div class="exam-preparo">
+                    <strong>Instruções de Preparo:</strong>
+                    <p>{{ exam.instrucoesPreparo }}</p>
+                  </div>
+                }
+                
+                @if (exam.observacoes) {
+                  <p class="exam-obs">
+                    <strong>Obs:</strong> {{ exam.observacoes }}
+                  </p>
+                }
+
+                <!-- Info de assinatura digital -->
+                @if (exam.isSigned) {
+                  <div class="signature-info">
+                    <app-icon name="shield" [size]="18" />
+                    <div class="signature-details">
+                      <strong>Documento Assinado Digitalmente</strong>
+                      @if (exam.certificateSubject) {
+                        <p>Certificado: {{ exam.certificateSubject }}</p>
+                      }
+                      @if (exam.signedAt) {
+                        <p>Data: {{ formatDate(exam.signedAt) }}</p>
+                      }
+                      @if (exam.documentHash) {
+                        <p class="hash">Hash: {{ exam.documentHash }}</p>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+              
+              <div class="exam-footer">
+                <span class="exam-date">
+                  <app-icon name="calendar" [size]="14" />
+                  {{ formatDate(exam.createdAt) }}
+                </span>
+                
+                @if (isProfessional) {
+                  <div class="exam-actions">
+                    @if (!exam.isSigned && canEdit) {
+                      <button class="action-btn edit" (click)="editExam(exam)" title="Editar">
+                        <app-icon name="edit" [size]="16" />
+                      </button>
+                      <button class="action-btn delete" (click)="deleteExam(exam)" title="Excluir">
+                        <app-icon name="trash" [size]="16" />
+                      </button>
+                      <button 
+                        class="action-btn sign" 
+                        type="button"
+                        (click)="openSignModal(exam); $event.stopPropagation()" 
+                        title="Assinar Digitalmente">
+                        <app-icon name="shield" [size]="16" />
+                      </button>
+                    }
+                    @if (exam.isSigned) {
+                      <button 
+                        class="action-btn pdf signed" 
+                        (click)="downloadSignedPdf(exam)"
+                        title="Baixar PDF Assinado (validável em validar.iti.gov.br)">
+                        <app-icon name="download" [size]="16" />
+                      </button>
+                    } @else if (canEdit) {
+                      <button 
+                        class="action-btn pdf" 
+                        (click)="generatePdf(exam)" 
+                        [disabled]="isGeneratingPdf"
+                        title="Gerar PDF">
+                        <app-icon name="download" [size]="16" />
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        }
+      </div>
+    }
+  }
+</div>
+
+<!-- Modal de Assinatura Digital -->
+<app-sign-document-modal
+  [isOpen]="showSignModal"
+  [documentType]="'exam'"
+  [documentId]="signingExamId || ''"
+  (close)="closeSignModal()"
+  (signed)="onDocumentSigned($event)"
+/>

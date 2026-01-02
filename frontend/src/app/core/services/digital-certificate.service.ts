@@ -59,7 +59,7 @@ export interface SignDocumentRequestDto {
   certificateId?: string;
   password?: string;
   oneTimePfxBase64?: string;
-  documentType: 'prescription' | 'certificate';
+  documentType: 'prescription' | 'certificate' | 'exam' | 'report';
   documentId: string;
 }
 
@@ -76,7 +76,7 @@ export interface SaveCertificateAndSignDto {
   password: string;
   displayName: string;
   quickUseEnabled: boolean;
-  documentType: 'prescription' | 'certificate';
+  documentType: 'prescription' | 'certificate' | 'exam' | 'report';
   documentId: string;
 }
 
@@ -201,6 +201,80 @@ export class DigitalCertificateService {
         // Extrair nome do arquivo do header Content-Disposition
         const contentDisposition = response.headers.get('Content-Disposition');
         let fileName = `atestado_${certificateId}_assinado.pdf`;
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (match && match[1]) {
+            fileName = match[1].replace(/['"]/g, '');
+          }
+        }
+        
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        console.error('Erro ao baixar PDF assinado:', err);
+      }
+    });
+  }
+
+  /**
+   * Baixa o PDF assinado de uma solicitação de exame
+   */
+  downloadSignedExamPdf(examId: string): void {
+    this.http.get(`${this.baseUrl}/exam/${examId}/signed-pdf`, { 
+      responseType: 'blob',
+      observe: 'response'
+    }).subscribe({
+      next: (response) => {
+        const blob = response.body;
+        if (!blob) return;
+        
+        // Extrair nome do arquivo do header Content-Disposition
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let fileName = `exame_${examId}_assinado.pdf`;
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (match && match[1]) {
+            fileName = match[1].replace(/['"]/g, '');
+          }
+        }
+        
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        console.error('Erro ao baixar PDF assinado:', err);
+      }
+    });
+  }
+
+  /**
+   * Baixa o PDF assinado de um laudo médico
+   */
+  downloadSignedReportPdf(reportId: string): void {
+    this.http.get(`${this.baseUrl}/report/${reportId}/signed-pdf`, { 
+      responseType: 'blob',
+      observe: 'response'
+    }).subscribe({
+      next: (response) => {
+        const blob = response.body;
+        if (!blob) return;
+        
+        // Extrair nome do arquivo do header Content-Disposition
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let fileName = `laudo_${reportId}_assinado.pdf`;
         if (contentDisposition) {
           const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
           if (match && match[1]) {

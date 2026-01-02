@@ -30,6 +30,8 @@ public class DigitalCertificateService : IDigitalCertificateService
     private readonly ILogger<DigitalCertificateService> _logger;
     private readonly IPrescriptionService _prescriptionService;
     private readonly IMedicalCertificateService _medicalCertificateService;
+    private readonly IExamRequestService _examRequestService;
+    private readonly IMedicalReportService _medicalReportService;
     private readonly string _encryptionKey;
 
     public DigitalCertificateService(
@@ -37,12 +39,16 @@ public class DigitalCertificateService : IDigitalCertificateService
         ILogger<DigitalCertificateService> logger,
         IPrescriptionService prescriptionService,
         IMedicalCertificateService medicalCertificateService,
+        IExamRequestService examRequestService,
+        IMedicalReportService medicalReportService,
         IConfiguration configuration)
     {
         _context = context;
         _logger = logger;
         _prescriptionService = prescriptionService;
         _medicalCertificateService = medicalCertificateService;
+        _examRequestService = examRequestService;
+        _medicalReportService = medicalReportService;
         _encryptionKey = configuration["JwtSettings:SecretKey"] ?? throw new InvalidOperationException("JwtSettings:SecretKey não configurado");
     }
 
@@ -341,6 +347,14 @@ public class DigitalCertificateService : IDigitalCertificateService
             {
                 result = await SignMedicalCertificateAsync(dto.DocumentId, x509Cert, userId, pfxBase64, password);
             }
+            else if (dto.DocumentType.ToLower() == "exam")
+            {
+                result = await SignExamRequestAsync(dto.DocumentId, x509Cert, userId, pfxBase64, password);
+            }
+            else if (dto.DocumentType.ToLower() == "report")
+            {
+                result = await SignMedicalReportAsync(dto.DocumentId, x509Cert, userId, pfxBase64, password);
+            }
             else
             {
                 return new SignDocumentResult
@@ -520,6 +534,149 @@ public class DigitalCertificateService : IDigitalCertificateService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Erro ao gerar PDF assinado do atestado");
+            return new SignDocumentResult
+            {
+                Success = false,
+                ErrorMessage = "Erro ao gerar PDF assinado: " + ex.Message
+            };
+        }
+    }
+
+    private async Task<SignDocumentResult> SignExamRequestAsync(Guid examId, X509Certificate2 cert, Guid userId, string pfxBase64, string password)
+    {
+        var exam = await _context.ExamRequests
+            .Include(e => e.Professional)
+                .ThenInclude(u => u.ProfessionalProfile)
+            .Include(e => e.Patient)
+                .ThenInclude(u => u.PatientProfile)
+            .Include(e => e.Appointment)
+            .FirstOrDefaultAsync(e => e.Id == examId && e.ProfessionalId == userId);
+
+        if (exam == null)
+        {
+            return new SignDocumentResult
+            {
+                Success = false,
+                ErrorMessage = "Solicitação de exame não encontrada ou você não tem permissão"
+            };
+        }
+
+        if (!string.IsNullOrEmpty(exam.SignedPdfBase64))
+        {
+            return new SignDocumentResult
+            {
+                Success = false,
+                ErrorMessage = "Esta solicitação de exame já está assinada"
+            };
+        }
+
+        try
+        {
+            var signedAt = DateTime.UtcNow;
+            
+            // Gerar PDF com informações de assinatura
+            var examService = _examRequestService as ExamRequestService;
+            var pdfBytes = examService!.GenerateExamPdf(exam, true, cert.Subject, signedAt);
+            
+            // Assinar PDF no padrão PAdES
+            var signedPdfBytes = SignPdfWithPAdES(pdfBytes, pfxBase64, password, cert, "Solicitação de Exame");
+            
+            // Criar hash do PDF assinado
+            var documentHash = ComputeHashBytes(signedPdfBytes);
+
+            // Atualizar o documento
+            exam.SignedPdfBase64 = Convert.ToBase64String(signedPdfBytes);
+            exam.DigitalSignature = "PAdES"; // Indica que é assinatura PAdES embutida no PDF
+            exam.CertificateThumbprint = cert.Thumbprint;
+            exam.CertificateSubject = cert.Subject;
+            exam.SignedAt = signedAt;
+            exam.DocumentHash = documentHash;
+
+            await _context.SaveChangesAsync();
+
+            return new SignDocumentResult
+            {
+                Success = true,
+                DocumentHash = documentHash,
+                CertificateSubject = cert.Subject,
+                SignedAt = exam.SignedAt
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao gerar PDF assinado da solicitação de exame");
+            return new SignDocumentResult
+            {
+                Success = false,
+                ErrorMessage = "Erro ao gerar PDF assinado: " + ex.Message
+            };
+        }
+    }
+
+    private async Task<SignDocumentResult> SignMedicalReportAsync(Guid reportId, X509Certificate2 cert, Guid userId, string pfxBase64, string password)
+    {
+        var report = await _context.MedicalReports
+            .Include(r => r.Professional)
+                .ThenInclude(u => u.ProfessionalProfile)
+                    .ThenInclude(pp => pp!.Specialty)
+            .Include(r => r.Patient)
+                .ThenInclude(u => u.PatientProfile)
+            .Include(r => r.Appointment)
+            .FirstOrDefaultAsync(r => r.Id == reportId && r.ProfessionalId == userId);
+
+        if (report == null)
+        {
+            return new SignDocumentResult
+            {
+                Success = false,
+                ErrorMessage = "Laudo não encontrado ou você não tem permissão"
+            };
+        }
+
+        if (!string.IsNullOrEmpty(report.SignedPdfBase64))
+        {
+            return new SignDocumentResult
+            {
+                Success = false,
+                ErrorMessage = "Este laudo já está assinado"
+            };
+        }
+
+        try
+        {
+            var signedAt = DateTime.UtcNow;
+            
+            // Gerar PDF com informações de assinatura
+            var reportService = _medicalReportService as MedicalReportService;
+            var pdfBytes = reportService!.GenerateReportPdf(report, true, cert.Subject, signedAt);
+            
+            // Assinar PDF no padrão PAdES
+            var signedPdfBytes = SignPdfWithPAdES(pdfBytes, pfxBase64, password, cert, "Laudo Médico");
+            
+            // Criar hash do PDF assinado
+            var documentHash = ComputeHashBytes(signedPdfBytes);
+
+            // Atualizar o documento
+            report.SignedPdfBase64 = Convert.ToBase64String(signedPdfBytes);
+            report.DigitalSignature = "PAdES"; // Indica que é assinatura PAdES embutida no PDF
+            report.CertificateThumbprint = cert.Thumbprint;
+            report.CertificateSubject = cert.Subject;
+            report.SignedAt = signedAt;
+            report.DocumentHash = documentHash;
+
+            await _context.SaveChangesAsync();
+
+            return new SignDocumentResult
+            {
+                Success = true,
+                DocumentHash = documentHash,
+                CertificateSubject = cert.Subject,
+                SignedAt = report.SignedAt
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao gerar PDF assinado do laudo");
             return new SignDocumentResult
             {
                 Success = false,

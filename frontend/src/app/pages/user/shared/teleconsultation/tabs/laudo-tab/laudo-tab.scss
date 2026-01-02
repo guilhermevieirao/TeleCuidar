@@ -1,0 +1,460 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.laudo-tab {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  height: 100%;
+  overflow-y: auto;
+
+  .tab-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: $spacing-sm;
+    border-bottom: 1px solid var(--border);
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: $spacing-sm;
+
+      h3 {
+        margin: 0;
+        font-size: $font-size-lg;
+        font-weight: $font-weight-semibold;
+        color: var(--text-primary);
+      }
+    }
+  }
+
+  .error-message {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    background-color: var(--red-50);
+    color: var(--red-700);
+    border: 1px solid var(--red-200);
+    border-radius: $radius-md;
+    font-size: $font-size-sm;
+
+    .close-error {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: var(--red-700);
+      cursor: pointer;
+      font-size: $font-size-lg;
+      line-height: 1;
+      padding: 0;
+      opacity: 0.7;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+  }
+
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-md;
+    padding: $spacing-xl;
+    color: var(--text-secondary);
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary-500);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  // Formulário
+  .report-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: $radius-lg;
+    overflow: hidden;
+
+    .form-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: $spacing-md;
+      background: var(--background);
+      border-bottom: 1px solid var(--border);
+
+      h4 {
+        margin: 0;
+        font-size: $font-size-base;
+        font-weight: $font-weight-semibold;
+        color: var(--text-primary);
+      }
+
+      .close-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        background: none;
+        border: none;
+        border-radius: $radius-sm;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all $transition-fast;
+
+        &:hover {
+          background: var(--neutral-100);
+          color: var(--text-primary);
+        }
+      }
+    }
+
+    .form-content {
+      padding: $spacing-md;
+      display: flex;
+      flex-direction: column;
+      gap: $spacing-md;
+    }
+
+    .form-row {
+      display: flex;
+      gap: $spacing-md;
+
+      @include mobile {
+        flex-direction: column;
+      }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: $spacing-xs;
+
+      &.half {
+        flex: 1;
+      }
+
+      &.one-third {
+        flex: 0.4;
+      }
+
+      &.two-thirds {
+        flex: 0.6;
+      }
+
+      label {
+        font-size: $font-size-sm;
+        font-weight: $font-weight-medium;
+        color: var(--text-secondary);
+      }
+
+      input,
+      select,
+      textarea {
+        padding: $spacing-sm $spacing-md;
+        border: 1px solid var(--border);
+        border-radius: $radius-md;
+        font-size: $font-size-base;
+        font-family: $font-primary;
+        background: var(--surface);
+        color: var(--text-primary);
+        transition: border-color $transition-fast;
+
+        &:focus {
+          outline: none;
+          border-color: var(--primary-500);
+        }
+
+        &::placeholder {
+          color: var(--text-secondary);
+          opacity: 0.7;
+        }
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 60px;
+      }
+
+      select {
+        cursor: pointer;
+      }
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: $spacing-md;
+      margin-top: $spacing-lg;
+      padding: $spacing-md;
+      background: var(--background);
+      border-top: 1px solid var(--border);
+    }
+  }
+
+  // Lista de laudos
+  .reports-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  .report-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: $radius-lg;
+    overflow: hidden;
+    transition: box-shadow $transition-fast;
+
+    &:hover {
+      box-shadow: $shadow-md;
+    }
+
+    &.signed {
+      border-color: var(--green-300);
+      background: linear-gradient(to right, var(--green-50) 0%, var(--surface) 100%);
+    }
+
+    .report-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: $spacing-md;
+      background: var(--background);
+      border-bottom: 1px solid var(--border);
+
+      .report-type {
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+        font-weight: $font-weight-semibold;
+        color: var(--text-primary);
+
+        .report-tipo-badge {
+          font-size: $font-size-xs;
+          font-weight: $font-weight-medium;
+          padding: 2px 8px;
+          background: var(--primary-100);
+          color: var(--primary-700);
+          border-radius: 12px;
+        }
+      }
+
+      .signed-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        background-color: var(--green-100);
+        color: var(--green-700);
+        border-radius: 20px;
+        font-size: $font-size-xs;
+        font-weight: $font-weight-medium;
+      }
+    }
+
+    .report-content {
+      padding: $spacing-md;
+
+      .report-detail {
+        font-size: $font-size-sm;
+        color: var(--text-secondary);
+        margin-bottom: $spacing-sm;
+
+        strong {
+          color: var(--text-primary);
+        }
+
+        .cid-tag {
+          display: inline-block;
+          margin-left: $spacing-sm;
+          font-size: $font-size-xs;
+          padding: 2px 6px;
+          background: var(--primary-500);
+          color: white;
+          border-radius: $radius-sm;
+          font-weight: $font-weight-medium;
+        }
+      }
+
+      .report-conclusion {
+        margin-bottom: $spacing-sm;
+
+        strong {
+          font-size: $font-size-sm;
+          color: var(--text-primary);
+          display: block;
+          margin-bottom: 4px;
+        }
+
+        p {
+          margin: 0;
+          font-size: $font-size-sm;
+          color: var(--text-primary);
+          line-height: 1.6;
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+      }
+
+      .report-obs {
+        margin: 0;
+        font-size: $font-size-sm;
+        color: var(--text-secondary);
+        font-style: italic;
+      }
+
+      .signature-info {
+        display: flex;
+        align-items: flex-start;
+        gap: $spacing-sm;
+        margin-top: $spacing-md;
+        padding: $spacing-sm $spacing-md;
+        background: var(--green-50);
+        border: 1px solid var(--green-200);
+        border-radius: $radius-md;
+        color: var(--green-700);
+
+        .signature-details {
+          flex: 1;
+
+          strong {
+            display: block;
+            margin-bottom: 4px;
+          }
+
+          p {
+            margin: 0;
+            font-size: $font-size-xs;
+            opacity: 0.9;
+          }
+
+          .hash {
+            font-family: $font-mono;
+            word-break: break-all;
+          }
+        }
+      }
+    }
+
+    .report-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: $spacing-sm $spacing-md;
+      background: var(--background);
+      border-top: 1px solid var(--border);
+
+      .report-date {
+        display: flex;
+        align-items: center;
+        gap: $spacing-xs;
+        font-size: $font-size-sm;
+        color: var(--text-secondary);
+      }
+
+      .report-actions {
+        display: flex;
+        gap: $spacing-xs;
+
+        .action-btn {
+          display: flex;
+          align-items: center;
+          gap: $spacing-xs;
+          padding: $spacing-xs $spacing-sm;
+          border: none;
+          border-radius: $radius-sm;
+          background: transparent;
+          color: var(--text-secondary);
+          cursor: pointer;
+          transition: all $transition-fast;
+          font-size: $font-size-sm;
+
+          &:hover {
+            background: var(--neutral-100);
+          }
+
+          &.edit:hover {
+            color: var(--primary-600);
+          }
+
+          &.delete:hover {
+            color: var(--red-600);
+          }
+
+          &.pdf:hover {
+            color: var(--blue-600);
+          }
+
+          &.pdf.signed {
+            background: var(--green-50);
+            color: var(--green-600);
+            font-weight: $font-weight-medium;
+
+            &:hover {
+              background: var(--green-100);
+              color: var(--green-700);
+            }
+          }
+
+          &.sign {
+            background: var(--primary-50);
+            color: var(--primary-600);
+            font-weight: $font-weight-medium;
+
+            &:hover {
+              background: var(--primary-100);
+            }
+          }
+
+          &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
+        }
+      }
+    }
+  }
+
+  // Empty state
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xl * 2;
+    text-align: center;
+    color: var(--text-secondary);
+
+    h4 {
+      margin: $spacing-md 0 $spacing-xs;
+      font-size: $font-size-lg;
+      font-weight: $font-weight-semibold;
+      color: var(--text-primary);
+    }
+
+    p {
+      margin: 0;
+      font-size: $font-size-base;
+    }
+  }
+}

@@ -1,0 +1,453 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.exame-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  height: 100%;
+  overflow-y: auto;
+
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 48px;
+    color: var(--text-secondary);
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary-500);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+  }
+
+  .exame-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+
+    .header-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      h3 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 48px 24px;
+    text-align: center;
+    background-color: var(--background);
+    border-radius: 12px;
+    border: 2px dashed var(--border);
+
+    app-icon {
+      color: var(--text-secondary);
+      opacity: 0.5;
+    }
+
+    h4 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: var(--text-primary);
+    }
+
+    p {
+      margin: 0;
+      color: var(--text-secondary);
+      max-width: 300px;
+    }
+  }
+
+  // Formulário
+  .exam-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: $radius-lg;
+    padding: $spacing-lg;
+
+    h4 {
+      margin: 0 0 $spacing-lg 0;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .form-row {
+      margin-bottom: $spacing-md;
+
+      &.two-cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: $spacing-md;
+
+        @include mobile {
+          grid-template-columns: 1fr;
+        }
+      }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: $spacing-xs;
+
+      label {
+        font-size: $font-size-sm;
+        font-weight: $font-weight-medium;
+        color: var(--text-secondary);
+      }
+
+      input, select, textarea {
+        padding: $spacing-sm $spacing-md;
+        border: 1px solid var(--border);
+        border-radius: $radius-md;
+        font-size: $font-size-base;
+        font-family: $font-primary;
+        background: var(--surface);
+        color: var(--text-primary);
+        transition: border-color $transition-fast;
+
+        &:focus {
+          outline: none;
+          border-color: var(--primary-500);
+        }
+
+        &::placeholder {
+          color: var(--text-secondary);
+          opacity: 0.7;
+        }
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 100px;
+      }
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: $spacing-md;
+      margin-top: $spacing-lg;
+      padding-top: $spacing-lg;
+      border-top: 1px solid var(--border);
+    }
+  }
+
+  // Lista de exames
+  .exams-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  .exam-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: $radius-lg;
+    overflow: hidden;
+    transition: box-shadow $transition-fast;
+
+    &:hover {
+      box-shadow: $shadow-md;
+    }
+
+    &.signed {
+      border-color: var(--green-300);
+      background: linear-gradient(to right, var(--green-50) 0%, var(--surface) 100%);
+    }
+
+    &.urgent {
+      border-color: var(--red-300);
+      
+      &:not(.signed) {
+        background: linear-gradient(to right, var(--red-50) 0%, var(--surface) 100%);
+      }
+    }
+
+    .exam-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: $spacing-md;
+      background: var(--background);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: $spacing-sm;
+
+      .exam-title {
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+        font-weight: $font-weight-semibold;
+        color: var(--text-primary);
+
+        .exam-code {
+          font-size: $font-size-sm;
+          font-weight: $font-weight-regular;
+          color: var(--text-secondary);
+        }
+      }
+
+      .exam-badges {
+        display: flex;
+        gap: $spacing-sm;
+      }
+
+      .urgent-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        background-color: var(--red-100);
+        color: var(--red-700);
+        border-radius: 20px;
+        font-size: $font-size-xs;
+        font-weight: $font-weight-medium;
+      }
+
+      .signed-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        background-color: var(--green-100);
+        color: var(--green-700);
+        border-radius: 20px;
+        font-size: $font-size-xs;
+        font-weight: $font-weight-medium;
+      }
+    }
+
+    .exam-content {
+      padding: $spacing-md;
+
+      .exam-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: $spacing-sm $spacing-lg;
+        padding: $spacing-sm;
+        background: var(--background);
+        border-radius: $radius-md;
+        margin-bottom: $spacing-md;
+
+        .meta-item {
+          font-size: $font-size-sm;
+          color: var(--text-secondary);
+
+          strong {
+            color: var(--text-primary);
+          }
+        }
+      }
+
+      .exam-indication {
+        margin-bottom: $spacing-md;
+
+        strong {
+          font-size: $font-size-sm;
+          color: var(--text-secondary);
+          display: block;
+          margin-bottom: 4px;
+        }
+
+        p {
+          margin: 0;
+          color: var(--text-primary);
+          line-height: 1.6;
+          white-space: pre-wrap;
+        }
+      }
+
+      .exam-detail {
+        font-size: $font-size-sm;
+        color: var(--text-secondary);
+        margin-bottom: $spacing-sm;
+
+        strong {
+          color: var(--text-primary);
+        }
+      }
+
+      .exam-preparo {
+        padding: $spacing-sm;
+        background: var(--warning-bg, rgba(251, 191, 36, 0.1));
+        border: 1px solid var(--warning-border, rgba(251, 191, 36, 0.3));
+        border-radius: $radius-md;
+        margin-bottom: $spacing-sm;
+
+        strong {
+          font-size: $font-size-sm;
+          color: var(--warning-text, #f59e0b);
+          display: block;
+          margin-bottom: 4px;
+        }
+
+        p {
+          margin: 0;
+          font-size: $font-size-sm;
+          color: var(--text-primary);
+        }
+      }
+
+      .exam-obs {
+        margin: 0;
+        font-size: $font-size-sm;
+        color: var(--text-secondary);
+        font-style: italic;
+      }
+    }
+
+    .exam-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: $spacing-sm $spacing-md;
+      background: var(--background);
+      border-top: 1px solid var(--border);
+
+      .exam-date {
+        display: flex;
+        align-items: center;
+        gap: $spacing-xs;
+        font-size: $font-size-sm;
+        color: var(--text-secondary);
+      }
+
+      .exam-actions {
+        display: flex;
+        gap: $spacing-xs;
+
+        .action-btn {
+          display: flex;
+          align-items: center;
+          gap: $spacing-xs;
+          padding: $spacing-xs $spacing-sm;
+          border: none;
+          border-radius: $radius-sm;
+          background: transparent;
+          color: var(--text-secondary);
+          cursor: pointer;
+          transition: all $transition-fast;
+          font-size: $font-size-sm;
+
+          &:hover {
+            background: var(--neutral-100);
+          }
+
+          &.edit:hover {
+            color: var(--primary-600);
+          }
+
+          &.delete:hover {
+            color: var(--red-600);
+          }
+
+          &.pdf:hover {
+            color: var(--blue-600);
+          }
+
+          &.pdf.signed {
+            background: var(--green-50);
+            color: var(--green-600);
+            font-weight: $font-weight-medium;
+
+            &:hover {
+              background: var(--green-100);
+              color: var(--green-700);
+            }
+          }
+
+          &.sign {
+            background: var(--primary-50);
+            color: var(--primary-600);
+            font-weight: $font-weight-medium;
+
+            &:hover {
+              background: var(--primary-100);
+            }
+          }
+
+          &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
+        }
+      }
+    }
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+// Info de assinatura digital
+.signature-info {
+  display: flex;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  background: linear-gradient(135deg, var(--green-50), var(--success-50, #ecfdf5));
+  border: 1px solid var(--green-200);
+  border-radius: $radius-md;
+  margin-top: $spacing-md;
+
+  app-icon {
+    color: var(--green-600);
+    flex-shrink: 0;
+  }
+
+  .signature-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    strong {
+      color: var(--green-700);
+      font-size: $font-size-sm;
+    }
+
+    p {
+      margin: 0;
+      font-size: $font-size-sm;
+      color: var(--text-secondary);
+
+      &.hash {
+        font-family: monospace;
+        font-size: $font-size-xs;
+        color: var(--text-tertiary);
+        word-break: break-all;
+      }
+    }
+  }
+}

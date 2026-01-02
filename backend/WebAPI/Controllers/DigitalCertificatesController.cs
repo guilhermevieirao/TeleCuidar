@@ -310,6 +310,60 @@ public class DigitalCertificatesController : ControllerBase
         var fileName = PdfDocumentHelper.GenerateFileName("Atestado", medCert.PatientName, medCert.CreatedAt, "Assinado");
         return File(pdfBytes, "application/pdf", fileName);
     }
+
+    /// <summary>
+    /// Download do PDF assinado de uma solicitação de exame
+    /// </summary>
+    [HttpGet("exam/{id}/signed-pdf")]
+    public async Task<IActionResult> DownloadSignedExamRequestPdf(Guid id)
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null)
+            return Unauthorized();
+
+        var exam = await _context.ExamRequests
+            .Include(e => e.Patient)
+            .Where(e => e.Id == id && (e.ProfessionalId == userId || e.PatientId == userId))
+            .Select(e => new { e.SignedPdfBase64, e.CreatedAt, PatientName = e.Patient!.Name + " " + e.Patient!.LastName })
+            .FirstOrDefaultAsync();
+
+        if (exam == null)
+            return NotFound(new { message = "Solicitação de exame não encontrada" });
+
+        if (string.IsNullOrEmpty(exam.SignedPdfBase64))
+            return BadRequest(new { message = "Esta solicitação de exame ainda não foi assinada digitalmente" });
+
+        var pdfBytes = Convert.FromBase64String(exam.SignedPdfBase64);
+        var fileName = PdfDocumentHelper.GenerateFileName("Exame", exam.PatientName, exam.CreatedAt, "Assinado");
+        return File(pdfBytes, "application/pdf", fileName);
+    }
+
+    /// <summary>
+    /// Download do PDF assinado de um laudo
+    /// </summary>
+    [HttpGet("report/{id}/signed-pdf")]
+    public async Task<IActionResult> DownloadSignedMedicalReportPdf(Guid id)
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null)
+            return Unauthorized();
+
+        var report = await _context.MedicalReports
+            .Include(r => r.Patient)
+            .Where(r => r.Id == id && (r.ProfessionalId == userId || r.PatientId == userId))
+            .Select(r => new { r.SignedPdfBase64, r.CreatedAt, PatientName = r.Patient!.Name + " " + r.Patient!.LastName })
+            .FirstOrDefaultAsync();
+
+        if (report == null)
+            return NotFound(new { message = "Laudo não encontrado" });
+
+        if (string.IsNullOrEmpty(report.SignedPdfBase64))
+            return BadRequest(new { message = "Este laudo ainda não foi assinado digitalmente" });
+
+        var pdfBytes = Convert.FromBase64String(report.SignedPdfBase64);
+        var fileName = PdfDocumentHelper.GenerateFileName("Laudo", report.PatientName, report.CreatedAt, "Assinado");
+        return File(pdfBytes, "application/pdf", fileName);
+    }
 }
 
 /// <summary>

@@ -223,6 +223,28 @@
           </div>
         }
 
+        <!-- Exame Tab -->
+        @if (activeTab === 'exame') {
+          <div class="tab-panel">
+            <app-exame-tab
+              [appointmentId]="appointmentId"
+              [userrole]="userrole"
+              [readonly]="true"
+            />
+          </div>
+        }
+
+        <!-- Laudo Tab -->
+        @if (activeTab === 'laudo') {
+          <div class="tab-panel">
+            <app-laudo-tab
+              [appointmentId]="appointmentId"
+              [userrole]="userrole"
+              [readonly]="true"
+            />
+          </div>
+        }
+
         <!-- Encaminhamento Tab -->
         @if (activeTab === 'referral') {
           <div class="tab-panel">

@@ -27,7 +27,7 @@ export interface SignDocumentEvent {
   styleUrls: ['./sign-document-modal.scss']
 })
 export class SignDocumentModalComponent implements OnInit {
-  @Input() documentType: 'prescription' | 'certificate' = 'prescription';
+  @Input() documentType: 'prescription' | 'certificate' | 'exam' | 'report' = 'prescription';
   @Input() documentId: string = '';
   @Input() isOpen = false;
   @Output() close = new EventEmitter<void>();
@@ -279,6 +279,12 @@ export class SignDocumentModalComponent implements OnInit {
   }
 
   getDocumentTypeName(): string {
-    return this.documentType === 'prescription' ? 'Receita' : 'Atestado';
+    switch (this.documentType) {
+      case 'prescription': return 'Receita';
+      case 'certificate': return 'Atestado';
+      case 'exam': return 'Solicitação de Exame';
+      case 'report': return 'Laudo';
+      default: return 'Documento';
+    }
   }
 }

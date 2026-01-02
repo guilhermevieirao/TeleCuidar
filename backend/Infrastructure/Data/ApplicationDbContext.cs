@@ -24,6 +24,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<Prescription> Prescriptions { get; set; }
     public DbSet<MedicalCertificate> MedicalCertificates { get; set; }
     public DbSet<DigitalCertificate> DigitalCertificates { get; set; }
+    public DbSet<ExamRequest> ExamRequests { get; set; }
+    public DbSet<MedicalReport> MedicalReports { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -292,6 +294,79 @@ public class ApplicationDbContext : DbContext
                 .WithMany(u => u.DigitalCertificates)
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+        
+        // ExamRequest Configuration
+        modelBuilder.Entity<ExamRequest>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.NomeExame).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.CodigoExame).HasMaxLength(50);
+            entity.Property(e => e.Categoria).IsRequired();
+            entity.Property(e => e.Prioridade).IsRequired();
+            entity.Property(e => e.IndicacaoClinica).IsRequired().HasMaxLength(2000);
+            entity.Property(e => e.HipoteseDiagnostica).HasMaxLength(500);
+            entity.Property(e => e.Cid).HasMaxLength(20);
+            entity.Property(e => e.Observacoes).HasMaxLength(2000);
+            entity.Property(e => e.InstrucoesPreparo).HasMaxLength(2000);
+            entity.Property(e => e.DigitalSignature).HasMaxLength(10000);
+            entity.Property(e => e.CertificateThumbprint).HasMaxLength(100);
+            entity.Property(e => e.CertificateSubject).HasMaxLength(500);
+            entity.Property(e => e.DocumentHash).HasMaxLength(100);
+            entity.HasIndex(e => e.DocumentHash);
+            entity.HasIndex(e => e.AppointmentId);
+
+            entity.HasOne(e => e.Appointment)
+                .WithMany()
+                .HasForeignKey(e => e.AppointmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Professional)
+                .WithMany()
+                .HasForeignKey(e => e.ProfessionalId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Patient)
+                .WithMany()
+                .HasForeignKey(e => e.PatientId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+        
+        // MedicalReport Configuration
+        modelBuilder.Entity<MedicalReport>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Tipo).IsRequired();
+            entity.Property(e => e.Titulo).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.HistoricoClinico).HasMaxLength(5000);
+            entity.Property(e => e.ExameFisico).HasMaxLength(5000);
+            entity.Property(e => e.ExamesComplementares).HasMaxLength(5000);
+            entity.Property(e => e.HipoteseDiagnostica).HasMaxLength(500);
+            entity.Property(e => e.Cid).HasMaxLength(20);
+            entity.Property(e => e.Conclusao).IsRequired().HasMaxLength(5000);
+            entity.Property(e => e.Recomendacoes).HasMaxLength(3000);
+            entity.Property(e => e.Observacoes).HasMaxLength(2000);
+            entity.Property(e => e.DigitalSignature).HasMaxLength(10000);
+            entity.Property(e => e.CertificateThumbprint).HasMaxLength(100);
+            entity.Property(e => e.CertificateSubject).HasMaxLength(500);
+            entity.Property(e => e.DocumentHash).HasMaxLength(100);
+            entity.HasIndex(e => e.DocumentHash);
+            entity.HasIndex(e => e.AppointmentId);
+
+            entity.HasOne(e => e.Appointment)
+                .WithMany()
+                .HasForeignKey(e => e.AppointmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Professional)
+                .WithMany()
+                .HasForeignKey(e => e.ProfessionalId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Patient)
+                .WithMany()
+                .HasForeignKey(e => e.PatientId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 
